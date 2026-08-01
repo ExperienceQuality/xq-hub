@@ -25,28 +25,28 @@ xq-qe-box/
 ├── CONTEXT.md
 ├── README.md
 ├── skills/
-│   └── <skill-name>/
-│       └── SKILL.md          # Agent Skills format — registry discovery
-├── scripts/
-│   └── install-cli.sh        # pinned agent-device only
+│   └── xq-device/
+│       ├── SKILL.md                 # Agent Skills format
+│       └── scripts/install-cli.sh   # pinned agent-device install (part of skill)
 ├── packages/                 # reserved
 └── cli/                      # reserved
 ```
 
 ### Install contract
 
-`scripts/install-cli.sh` installs pinned `agent-device` globally (exact version; no silent `@latest` for agents) and prints next steps (skill add + `agent-device help workflow`).
+`skills/xq-device/scripts/install-cli.sh` installs pinned `agent-device` globally (exact version; no silent `@latest` for agents) and prints next steps (skill install + `agent-device help workflow`).
 
-### Skills (registry)
+### Skills (`gh skill` / registry)
 
-Public GitHub is the publish surface — no separate registry upload. Each skill is `skills/<name>/SKILL.md` with YAML `name` + `description`. Consumers:
+Layout must satisfy `gh skill publish` discovery (`skills/*/SKILL.md`; `name` matches directory; required frontmatter). Optional `scripts/` beside `SKILL.md` is valid per the Agent Skills spec. Validate with `gh skill publish --dry-run` before a real publish.
 
 ```bash
-npx skills add ExperienceQuality/xq-qe-box --list
-npx skills add ExperienceQuality/xq-qe-box --skill xq-device
+gh skill preview ExperienceQuality/xq-qe-box xq-device
+gh skill install ExperienceQuality/xq-qe-box xq-device
+# or: npx skills add ExperienceQuality/xq-qe-box --skill xq-device
 ```
 
-Day-one skill: **`xq-device`** — thin router to install script + version-matched `agent-device help`.
+Day-one skill: **`xq-device`** — thin router to bundled install script + version-matched `agent-device help`.
 
 ### Hub bookkeeping
 
@@ -63,10 +63,10 @@ Day-one skill: **`xq-device`** — thin router to install script + version-match
 ## Acceptance (bootstrap)
 
 - [x] Repo `ExperienceQuality/xq-qe-box` exists (public)
-- [x] Layout with `scripts/install-cli.sh` (agent-device only) and `skills/*/SKILL.md`
+- [x] Layout with `skills/xq-device/SKILL.md` + `skills/xq-device/scripts/install-cli.sh`; `gh skill publish --dry-run` clean
 - [ ] `agent-device --version` works after install on a target machine
 - [x] Skill listable via `npx skills add ExperienceQuality/xq-qe-box --list`
-- [x] Hub catalogue + `satellite:xq-qe-box` label exist _(Hub markdown may still need commit/PR)_
+- [x] Hub catalogue + `satellite:xq-qe-box` label exist
 
 ## Tracer-bullet Tickets (suggested)
 
