@@ -6,17 +6,11 @@
 
 ## Problem
 
-Agents across XQ Satellites need a single, org-owned place to get:
-
-1. An agent-native device CLI (upstream `agent-device`)
-2. Skills published to the skills registry (`npx skills add …`)
-3. A reliable bash install path for humans and harnesses
-
-Without a Satellite, install steps and skills drift per app repo.
+Agents across XQ Satellites need a single, org-owned place for agent-native mobile QE: a **thin DeviceKit-direct CLI**, skills registry packaging, and optional upstream tools — without forcing the heavier agent-device daemon stack for every loop.
 
 ## Solution
 
-Create Satellite **`xq-qe-box`** (`ExperienceQuality/xq-qe-box`) as a **monorepo** that owns skills, install scripts, and future CLI/packages. Do not ship a second mobile-control runtime or an `xq-qe` wrapper — install and route to `agent-device`.
+Create Satellite **`xq-qe-box`** (`ExperienceQuality/xq-qe-box`) as a **monorepo** that owns the DeviceKit-direct CLI **`xq-motest`** (cloned from `xq-versastacks` `xq-ios-act-cli`), skills, and optional agent-device helpers. Primary path is thin host CLI → DeviceKit — not the agent-device daemon stack.
 
 ### Monorepo layout
 
@@ -24,29 +18,33 @@ Create Satellite **`xq-qe-box`** (`ExperienceQuality/xq-qe-box`) as a **monorepo
 xq-qe-box/
 ├── CONTEXT.md
 ├── README.md
+├── cli/xq-motest/                   # Swift CLI → DeviceKit (from xq-ios-act)
 ├── skills/
-│   └── xq-mobile-auto-test/
-│       ├── SKILL.md                 # Agent Skills format
-│       └── scripts/install-cli.sh   # pinned agent-device install (part of skill)
-├── packages/                 # reserved
-└── cli/                      # reserved
+│   ├── xq-motest/                   # skill for DeviceKit-direct CLI
+│   └── xq-mobile-auto-test/         # optional agent-device install + router
+│       ├── SKILL.md
+│       └── scripts/install-cli.sh
+└── packages/                        # reserved
 ```
 
-### Install contract
+### Primary CLI: xq-motest
 
-`skills/xq-mobile-auto-test/scripts/install-cli.sh` installs pinned `agent-device` globally (exact version; no silent `@latest` for agents) and prints next steps (skill install + `agent-device help workflow`).
+- Lives in `cli/xq-motest/`; binary `xq-motest`; env `XQ_MOTEST_*`.
+- Talks **directly to DeviceKit** JSON-RPC (same shape as MobileCLI → DeviceKit).
+- Skill: `skills/xq-motest/`.
+- Origin: see `cli/xq-motest/ORIGIN.md`.
+
+### Optional: agent-device
+
+`skills/xq-mobile-auto-test/scripts/install-cli.sh` still pins upstream `agent-device` for comparison or workflows that need its settle/`is` surface.
 
 ### Skills (`gh skill` / registry)
 
-Layout must satisfy `gh skill publish` discovery (`skills/*/SKILL.md`; `name` matches directory; required frontmatter). Optional `scripts/` beside `SKILL.md` is valid per the Agent Skills spec. Validate with `gh skill publish --dry-run` before a real publish.
-
 ```bash
-gh skill preview ExperienceQuality/xq-qe-box xq-mobile-auto-test
+gh skill publish --dry-run
+gh skill install ExperienceQuality/xq-qe-box xq-motest
 gh skill install ExperienceQuality/xq-qe-box xq-mobile-auto-test
-# or: npx skills add ExperienceQuality/xq-qe-box --skill xq-mobile-auto-test
 ```
-
-Day-one skill: **`xq-mobile-auto-test`** — thin router to bundled install script + version-matched `agent-device help`.
 
 ### Hub bookkeeping
 
@@ -56,21 +54,22 @@ Day-one skill: **`xq-mobile-auto-test`** — thin router to bundled install scri
 ## Out of scope
 
 - An `xq-qe` wrapper package/binary
-- Replacing or forking `agent-device` internals
+- Replacing or forking `agent-device` internals (optional skill only)
 - MCP / Node client packaging (CLI agent-native focus)
 - Per-app CI matrices (later Tickets)
+- Retiring `xq-ios-act` in versastacks (separate Ticket if desired)
 
 ## Acceptance (bootstrap)
 
 - [x] Repo `ExperienceQuality/xq-qe-box` exists (public)
-- [x] Layout with `skills/xq-mobile-auto-test/SKILL.md` + `skills/xq-mobile-auto-test/scripts/install-cli.sh`; `gh skill publish --dry-run` clean
-- [ ] `agent-device --version` works after install on a target machine
-- [x] Skill listable via `npx skills add ExperienceQuality/xq-qe-box --list`
+- [x] `cli/xq-motest` present (clone/rename from `xq-ios-act-cli`) + `skills/xq-motest`
+- [x] Optional `skills/xq-mobile-auto-test` + agent-device install script; `gh skill publish --dry-run` clean
 - [x] Hub catalogue + `satellite:xq-qe-box` label exist
 
 ## Tracer-bullet Tickets (suggested)
 
-1. Bootstrap repo + install script + `xq-mobile-auto-test` skill (this Spec)
-2. Pin strategy / release notes for `agent-device` upgrades
-3. Wire first product Satellite with skill + install docs
-4. Optional: first-party CLI under `cli/` or `packages/` when Spec’d
+1. Bootstrap repo + skills (done)
+2. Land `xq-motest` in `xq-qe-box` (this change)
+3. Clone/improve DeviceKit for XQ search/assert gaps (later Spec)
+4. Wire first product Satellite to `xq-motest`
+5. Optional: retire or thin `xq-ios-act` in versastacks
