@@ -9,6 +9,7 @@ Hub index of Satellites. Ticket labels mirror this table. Do not copy product gl
 | xq-financial-app | https://github.com/ExperienceQuality/xq-financial-app | Financial product application | `satellite:xq-financial-app` |
 | xq-versastacks | https://github.com/ExperienceQuality/xq-versastacks | Versastacks system | `satellite:xq-versastacks` |
 | xq-context-hub | https://github.com/ExperienceQuality/xq-context-hub | Legacy / prior context hub (clarify or retire) | `satellite:xq-context-hub` |
+| xq-qe-box | https://github.com/ExperienceQuality/xq-qe-box | Agent-native QE monorepo (skills, install script, future CLI/packages); installs upstream agent-device | `satellite:xq-qe-box` |
 
 Add a row when a Satellite joins the org. Create the matching GitHub label on this Hub repo before filing Tickets against it. Tighten purpose lines when each Satellite’s own `CONTEXT.md` exists.
 
