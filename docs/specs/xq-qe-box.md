@@ -25,7 +25,7 @@ xq-qe-box/
 ├── CONTEXT.md
 ├── README.md
 ├── skills/
-│   └── xq-device/
+│   └── xq-mobile-auto-test/
 │       ├── SKILL.md                 # Agent Skills format
 │       └── scripts/install-cli.sh   # pinned agent-device install (part of skill)
 ├── packages/                 # reserved
@@ -34,19 +34,19 @@ xq-qe-box/
 
 ### Install contract
 
-`skills/xq-device/scripts/install-cli.sh` installs pinned `agent-device` globally (exact version; no silent `@latest` for agents) and prints next steps (skill install + `agent-device help workflow`).
+`skills/xq-mobile-auto-test/scripts/install-cli.sh` installs pinned `agent-device` globally (exact version; no silent `@latest` for agents) and prints next steps (skill install + `agent-device help workflow`).
 
 ### Skills (`gh skill` / registry)
 
 Layout must satisfy `gh skill publish` discovery (`skills/*/SKILL.md`; `name` matches directory; required frontmatter). Optional `scripts/` beside `SKILL.md` is valid per the Agent Skills spec. Validate with `gh skill publish --dry-run` before a real publish.
 
 ```bash
-gh skill preview ExperienceQuality/xq-qe-box xq-device
-gh skill install ExperienceQuality/xq-qe-box xq-device
-# or: npx skills add ExperienceQuality/xq-qe-box --skill xq-device
+gh skill preview ExperienceQuality/xq-qe-box xq-mobile-auto-test
+gh skill install ExperienceQuality/xq-qe-box xq-mobile-auto-test
+# or: npx skills add ExperienceQuality/xq-qe-box --skill xq-mobile-auto-test
 ```
 
-Day-one skill: **`xq-device`** — thin router to bundled install script + version-matched `agent-device help`.
+Day-one skill: **`xq-mobile-auto-test`** — thin router to bundled install script + version-matched `agent-device help`.
 
 ### Hub bookkeeping
 
@@ -63,14 +63,14 @@ Day-one skill: **`xq-device`** — thin router to bundled install script + versi
 ## Acceptance (bootstrap)
 
 - [x] Repo `ExperienceQuality/xq-qe-box` exists (public)
-- [x] Layout with `skills/xq-device/SKILL.md` + `skills/xq-device/scripts/install-cli.sh`; `gh skill publish --dry-run` clean
+- [x] Layout with `skills/xq-mobile-auto-test/SKILL.md` + `skills/xq-mobile-auto-test/scripts/install-cli.sh`; `gh skill publish --dry-run` clean
 - [ ] `agent-device --version` works after install on a target machine
 - [x] Skill listable via `npx skills add ExperienceQuality/xq-qe-box --list`
 - [x] Hub catalogue + `satellite:xq-qe-box` label exist
 
 ## Tracer-bullet Tickets (suggested)
 
-1. Bootstrap repo + install script + `xq-device` skill (this Spec)
+1. Bootstrap repo + install script + `xq-mobile-auto-test` skill (this Spec)
 2. Pin strategy / release notes for `agent-device` upgrades
 3. Wire first product Satellite with skill + install docs
 4. Optional: first-party CLI under `cli/` or `packages/` when Spec’d
