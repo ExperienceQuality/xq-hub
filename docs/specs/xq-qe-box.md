@@ -21,9 +21,14 @@ xq-qe-box/
 ├── cli/xq-motest/                   # Swift CLI → DeviceKit (from xq-ios-act)
 ├── skills/
 │   ├── xq-motest/                   # skill for DeviceKit-direct CLI
-│   └── xq-mobile-auto-test/         # optional agent-device install + router
-│       ├── SKILL.md
-│       └── scripts/install-cli.sh
+│   ├── xq-mobile-auto-test/         # optional agent-device install + router
+│   │   ├── SKILL.md
+│   │   └── scripts/install-cli.sh
+│   ├── quality-principles/          # Hub quality/ conformance pack
+│   ├── quality-asset-strategy/
+│   ├── quality-test-plan/
+│   ├── quality-reporting/
+│   └── quality-controlling/
 └── packages/                        # reserved
 ```
 
@@ -40,12 +45,21 @@ xq-qe-box/
 
 `skills/xq-mobile-auto-test/scripts/install-cli.sh` still pins upstream `agent-device` for comparison or workflows that need its settle/`is` surface.
 
+### Quality skills
+
+Five skills under `skills/quality-*` enforce Hub [`quality/`](../../quality/README.md) (sizes, hermeticity, spot coverage). Each skill vendors the needed markdown under `references/` (no Hub download at runtime). Satellites install via `gh skill` and do not keep a quality doc binder.
+
 ### Skills (`gh skill` / registry)
 
 ```bash
 gh skill publish --dry-run
 gh skill install ExperienceQuality/xq-qe-box xq-motest
 gh skill install ExperienceQuality/xq-qe-box xq-mobile-auto-test
+gh skill install ExperienceQuality/xq-qe-box quality-principles
+gh skill install ExperienceQuality/xq-qe-box quality-asset-strategy
+gh skill install ExperienceQuality/xq-qe-box quality-test-plan
+gh skill install ExperienceQuality/xq-qe-box quality-reporting
+gh skill install ExperienceQuality/xq-qe-box quality-controlling
 ```
 
 ### Hub bookkeeping
