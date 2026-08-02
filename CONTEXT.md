@@ -37,3 +37,7 @@ _Avoid_: Spike, sandbox, POC (when you mean a Hub-managed throwaway answer)
 **Handoff**:
 A short Hub-owned brief that packages intent, constraints, and links for the next session or agent. The next agent receives an explicit pointer at launch (path or Ticket); it does not scan for open handoffs. Lasting truth stays in Idea, Spec, Ticket, and CONTEXT — not in the Handoff.
 _Avoid_: Session log, ticket dump, inbox, queue (ready work is a Ticket)
+
+## Quality (org testing method)
+
+Normative docs live under Hub `quality/`. Vocabulary (asset, component, capability, attribute, spot, test sizes) is defined in [`quality/glossary.md`](quality/glossary.md). Agents conform via `quality-*` skills installed from Satellite `xq-qe-box` (`gh skill install`), not via Satellite-local quality binders.
