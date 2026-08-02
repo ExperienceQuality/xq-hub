@@ -2,7 +2,7 @@
 
 **Status:** Active — Satellite bootstrap.
 
-**Related:** [`docs/ideas/xq-qe-box.md`](../ideas/xq-qe-box.md), [`docs/ideas/agent-device-cli.md`](../ideas/agent-device-cli.md)
+**Related:** [`docs/ideas/xq-qe-box.md`](../ideas/xq-qe-box.md), [`docs/ideas/agent-device-cli.md`](../ideas/agent-device-cli.md), [`docs/specs/xq-motest-deep-modules.md`](xq-motest-deep-modules.md)
 
 ## Problem
 
@@ -31,8 +31,10 @@ xq-qe-box/
 
 - Lives in `cli/xq-motest/`; binary `xq-motest`; env `XQ_MOTEST_*`.
 - Talks **directly to DeviceKit** JSON-RPC (same shape as MobileCLI → DeviceKit).
+- **Does not install** the DeviceKit runner — agent host infra must preinstall `.app` / `.ipa` on test devices (see `xq-motest-deep-modules` Spec + Satellite ADR-0001).
 - Skill: `skills/xq-motest/`.
 - Origin: see `cli/xq-motest/ORIGIN.md`.
+- Architecture deepenings: [`xq-motest-deep-modules`](xq-motest-deep-modules.md).
 
 ### Optional: agent-device
 
@@ -58,6 +60,7 @@ gh skill install ExperienceQuality/xq-qe-box xq-mobile-auto-test
 - MCP / Node client packaging (CLI agent-native focus)
 - Per-app CI matrices (later Tickets)
 - Retiring `xq-ios-act` in versastacks (separate Ticket if desired)
+- Shipping DeviceKit install/resign scripts inside `xq-motest` (infra owns runner provisioning)
 
 ## Acceptance (bootstrap)
 
