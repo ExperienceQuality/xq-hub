@@ -14,3 +14,6 @@ Use these terms in ephemeral strategy/plans and when naming sizes/stages. Prefer
 | **Presubmit** | PR / pre-merge gate: **small + medium** for affected assets. | Running large E2E on every PR by default |
 | **Post-submit** | After merge: broader medium + **large** multi-asset / live E2E lanes. | Blocking every merge on full product E2E |
 | **Ephemeral plan** | Spot → size → stage notes in a PR or Ticket body. Not committed as a lasting matrix file. | Requiring `docs/quality/` binders in Satellites |
+| **Terminal** | `xq-terminal` admission CLI (TAP-like gateway): scans passport, boards merge/release. | Google’s internal TAP binary |
+| **Passport** | CI artifact JSON of planned (`dryRunTotal`) + passed/failed/quarantined small+medium results for an asset+sha. | Committed living scorecard; line-% alone |
+| **Sandbox** | Org env (v1 stub in `xq-qe-box`) where release-gate large tests run against ipa/apk/service. | Per-dev laptop-only ad hoc env (when you mean the platform) |

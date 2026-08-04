@@ -2,7 +2,7 @@
 
 **Status:** Active — Satellite bootstrap.
 
-**Related:** [`docs/ideas/xq-qe-box.md`](../ideas/xq-qe-box.md), [`docs/ideas/agent-device-cli.md`](../ideas/agent-device-cli.md), [`docs/specs/xq-motest-deep-modules.md`](xq-motest-deep-modules.md)
+**Related:** [`docs/ideas/xq-qe-box.md`](../ideas/xq-qe-box.md), [`docs/ideas/agent-device-cli.md`](../ideas/agent-device-cli.md), [`docs/specs/xq-motest-deep-modules.md`](xq-motest-deep-modules.md), [`docs/specs/xq-terminal.md`](xq-terminal.md)
 
 ## Problem
 
@@ -19,8 +19,11 @@ xq-qe-box/
 ├── CONTEXT.md
 ├── README.md
 ├── cli/xq-motest/                   # Swift CLI → DeviceKit (from xq-ios-act)
+├── cli/xq-terminal/                 # TAP-like board controller (see xq-terminal Spec)
+├── packages/sandbox/                # Terminal sandbox provisioner (stub v1)
 ├── skills/
 │   ├── xq-motest/                   # skill for DeviceKit-direct CLI
+│   ├── xq-terminal/                 # skill for board / passport flow
 │   ├── xq-mobile-auto-test/         # optional agent-device install + router
 │   │   ├── SKILL.md
 │   │   └── scripts/install-cli.sh
@@ -48,6 +51,10 @@ xq-qe-box/
 ### Quality skills
 
 Five skills under `skills/quality-*` enforce Hub [`quality/`](../../quality/README.md) (sizes, hermeticity, spot coverage). Each skill vendors the needed markdown under `references/` (no Hub download at runtime). Satellites install via `gh skill` and do not keep a quality doc binder.
+
+### Terminal (TAP-like boarding)
+
+[`xq-terminal` Spec](xq-terminal.md): CLI runner/controller that scans a Satellite CI **passport** (small/medium) for merge boarding, and for release boarding runs large tests via an in-box **sandbox** (stub v1) against `ipa`/`apk`/service artifacts.
 
 ### Skills (`gh skill` / registry)
 

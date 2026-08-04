@@ -1,7 +1,7 @@
 # Quality principles
 
 **Status:** Normative for ExperienceQuality agents and CI design.  
-**Anchors:** [SWE Book ch. 11 — Testing Overview](https://abseil.io/resources/swe-book/html/ch11.html) (sizes, hermeticity); coverage as a **matrix of spots**, not a global line-% gate. TAP-like *policy* (presubmit vs post-submit) — see [`docs/ideas/google-tap.md`](../docs/ideas/google-tap.md) — not Google’s internal TAP product.
+**Anchors:** [SWE Book ch. 11 — Testing Overview](https://abseil.io/resources/swe-book/html/ch11.html) (sizes, hermeticity); coverage as a **matrix of spots**, not a global line-% gate. TAP-like *policy* (presubmit vs post-submit) and admission CLI — see [`docs/specs/xq-terminal.md`](../docs/specs/xq-terminal.md) — not Google’s internal TAP product.
 
 ---
 
