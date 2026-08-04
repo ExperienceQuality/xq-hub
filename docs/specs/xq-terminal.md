@@ -166,12 +166,12 @@ Skill: load Hub quality principles (vendored or via `quality-principles`), run `
 - [ ] **release** path calls stub sandbox with `--artifact` and returns qualified/not
 - [ ] Skill `xq-terminal` installable via `gh skill`
 - [ ] Hub Idea collapsed; this Spec linked from `xq-qe-box` Spec
-- [ ] Tracer-bullet Tickets filed on Hub with `satellite:xq-qe-box`
+- [x] Tracer-bullet Tickets filed on Hub with `satellite:xq-qe-box` (#17–#21)
 
 ## Tracer-bullet Tickets (suggested)
 
-1. Passport schema + `board --gate merge` (fixture-driven)
-2. Skill `xq-terminal` + README
-3. Stub sandbox package + `board --gate release`
-4. Wire one Satellite CI to emit `passport.json` artifact
-5. Real sandbox backend (later Spec slice)
+1. [#17](https://github.com/ExperienceQuality/xq-hub/issues/17) — Passport schema + `board --gate merge` (fixture-driven)
+2. [#18](https://github.com/ExperienceQuality/xq-hub/issues/18) — Skill `xq-terminal` + README
+3. [#19](https://github.com/ExperienceQuality/xq-hub/issues/19) — Stub sandbox package + `board --gate release`
+4. [#20](https://github.com/ExperienceQuality/xq-hub/issues/20) — Wire one Satellite CI to emit `passport.json` artifact
+5. [#21](https://github.com/ExperienceQuality/xq-hub/issues/21) — Real sandbox backend (later Spec slice)
