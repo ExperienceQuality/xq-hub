@@ -43,5 +43,5 @@ _Avoid_: Session log, ticket dump, inbox, queue (ready work is a Ticket)
 Normative docs live under Hub `quality/`. Vocabulary (asset, component, capability, attribute, spot, test sizes) is defined in [`quality/glossary.md`](quality/glossary.md). Agents conform via `quality-*` skills installed from Satellite `xq-qe-box` (`gh skill install`), not via Satellite-local quality binders.
 
 **Terminal** (`xq-terminal`):
-TAP-like admission CLI in `xq-qe-box`: asset checks in with a **passport** (small/medium results JSON); output is **qualified / not** to board the **merge** or **release** plane. Release also uses an org **sandbox** against the shippable artifact. Spec: [`docs/specs/xq-terminal.md`](docs/specs/xq-terminal.md).
-_Avoid_: Google TAP product clone; calling CI alone “the Terminal” when the controller CLI is meant
+TAP-like admission **JVM** CLI in `xq-qe-box`: asset checks in with a **passport** (small/medium results JSON); output is **qualified / not** to board the **merge** or **release** plane. Release loads **remote Spec fat JARs** via ServiceLoader (not Runner build deps) and uses an org **sandbox**. Spec: [`docs/specs/xq-terminal.md`](docs/specs/xq-terminal.md).
+_Avoid_: Google TAP product clone; Python Terminal core; declaring Specs as Runner `implementation` dependencies

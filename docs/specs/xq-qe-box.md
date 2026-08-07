@@ -19,7 +19,8 @@ xq-qe-box/
 ├── CONTEXT.md
 ├── README.md
 ├── cli/xq-motest/                   # Swift CLI → DeviceKit (from xq-ios-act)
-├── cli/xq-terminal/                 # TAP-like board controller (see xq-terminal Spec)
+├── cli/xq-terminal/                 # JVM Terminal / Spec Runner (see xq-terminal Spec)
+├── packages/runner-sdk/             # shared RunnerSpec API
 ├── packages/sandbox/                # Terminal sandbox provisioner (stub v1)
 ├── skills/
 │   ├── xq-motest/                   # skill for DeviceKit-direct CLI
