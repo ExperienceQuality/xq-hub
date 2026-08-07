@@ -4,7 +4,7 @@
 
 TAP-like **airport Terminal** for ExperienceQuality: an asset checks in with a **passport** (small/medium results); the Terminal decides **qualified / not** to board the **merge** or **release** plane. Release boarding uses a **sandbox** and runs asset logic via **remote JVM Spec plugins** (fat JAR + ServiceLoader), not Runner build dependencies.
 
-**Stack:** Java 17+ / Gradle — shared `runner-sdk`, Picocli CLI, Jackson passport models, isolated ClassLoaders. Not Python.
+**Stack:** JVM 17+ / Gradle — shared `runner-sdk` (Java API), Runner CLI may be **Java or Kotlin**, Jackson passport models, isolated ClassLoaders. Ship as **JVM app** (`installDist`), not a native binary.
 
 Not a clone of Google’s internal TAP binary — borrows the **gateway** role. Aligns with Hub [`quality/`](../../quality/README.md).
 

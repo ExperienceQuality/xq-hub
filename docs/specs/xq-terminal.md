@@ -18,11 +18,12 @@ Ship **`xq-terminal`** inside **`xq-qe-box`** as a **JVM Runner + controller CLI
 
 | Layer | Choice |
 | --- | --- |
-| Language | **Java** (17+) |
+| Language | **JVM 17+** — `runner-sdk` as **Java** interfaces; Runner CLI **Java or Kotlin** |
 | Build | **Gradle** + Shadow (or equivalent) for Spec fat JARs |
 | CLI | Thin CLI edge (**Picocli** recommended) → services |
-| JSON / passport | **Jackson** (Pydantic-role for the passport contract) |
-| Plugin model | Shared **`runner-sdk`** + remote Spec fat JARs + **ServiceLoader** + isolated **URLClassLoader** |
+| Distribution | **JVM app** (`installDist` / `run`) — **not** native binary |
+| JSON / passport | **Jackson** |
+| Plugin model | Shared **`runner-sdk`** + remote Spec fat JARs + **ServiceLoader** + isolated **ClassLoader** |
 
 **Not used:** Python / uv / Fire / httpimport for the Terminal core. (`xq-motest` stays Swift.)
 
@@ -223,7 +224,11 @@ Rules:
 
 ### CLI contract
 
-Binary / distribution: `xq-terminal` (Gradle application or jlink/jpackage later). Env: `XQ_TERMINAL_*`.
+Distribution: **JVM app** via Gradle Application plugin (`installDist` / `run`) — script launcher `xq-terminal` on PATH after install. Requires a JDK/JRE at runtime.
+
+**Descoped:** native OS binary (GraalVM Native Image, Kotlin/Native, jlink/jpackage as a product requirement). Dynamic Spec `ClassLoader` loading is incompatible with a closed-world native image; do not pursue a single static binary in v1.
+
+Env: `XQ_TERMINAL_*`.
 
 ```bash
 xq-terminal board \
@@ -269,6 +274,7 @@ No Runner rebuild / no Spec `implementation` in Runner Gradle / no ServiceLoader
 - New Satellite solely for Terminal
 - Replacing `xq-motest`
 - In-process loading of untrusted Specs without pin/cache/integrity
+- **Native binary** shipping (GraalVM Native Image, Kotlin/Native, or jpackage as a v1 deliverable) — JVM distribution only
 
 ## Acceptance (Spec-level)
 
