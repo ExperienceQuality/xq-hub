@@ -1,6 +1,6 @@
-# Spec: xq-runner-sdk
+# Spec: xq-terminal-sdk
 
-**Status:** Active — buildable plan for Satellite `xq-runner-sdk`.
+**Status:** Active — buildable plan for Satellite `xq-terminal-sdk`.
 
 **Related:** [`docs/specs/xq-terminal.md`](xq-terminal.md) · [`docs/specs/xq-qe-box.md`](xq-qe-box.md)
 
@@ -10,13 +10,13 @@
 
 ## Solution
 
-Ship Satellite **`xq-runner-sdk`** (`ExperienceQuality/xq-runner-sdk`) as a **Java 17+ library** — interfaces and records only (no CLI, no ClassLoader, no passport logic).
+Ship Satellite **`xq-terminal-sdk`** (`ExperienceQuality/xq-terminal-sdk`) as a **Java 17+ library** — interfaces and records only (no CLI, no ClassLoader, no passport logic).
 
 | Layer | Choice |
 | --- | --- |
 | Language | **Java 17+** (interfaces/records; no Kotlin in the SDK) |
 | Build | **Gradle** (Java library) |
-| Coordinates | `com.experiencequality.runner:runner-sdk:<version>` |
+| Coordinates | `com.experiencequality.terminal:terminal-sdk:<version>` |
 | Publish (v1) | **GitHub Packages** (Maven) — library consumers use normal Gradle deps |
 | Consumers | Runner (`implementation`); Specs (`compileOnly`, exclude from fat JAR) |
 
@@ -25,7 +25,7 @@ Ship Satellite **`xq-runner-sdk`** (`ExperienceQuality/xq-runner-sdk`) as a **Ja
 ### API (v1)
 
 ```java
-package com.experiencequality.runner.sdk;
+package com.experiencequality.terminal.sdk;
 
 public interface RunnerSpec {
     String name();
@@ -52,12 +52,12 @@ ServiceLoader registration lives in **Spec** projects (`META-INF/services/...`),
 ### Layout
 
 ```
-xq-runner-sdk/
+xq-terminal-sdk/
 ├── CONTEXT.md
 ├── README.md
 ├── settings.gradle.kts
 ├── build.gradle.kts
-└── src/main/java/com/experiencequality/runner/sdk/
+└── src/main/java/com/experiencequality/terminal/sdk/
     ├── RunnerSpec.java
     ├── SpecContext.java
     └── SpecResult.java
@@ -72,13 +72,13 @@ xq-runner-sdk/
 
 ## Acceptance
 
-- [x] Repo `ExperienceQuality/xq-runner-sdk` exists; catalogue + `satellite:xq-runner-sdk` label
+- [x] Repo `ExperienceQuality/xq-terminal-sdk` exists; catalogue + `satellite:xq-terminal-sdk` label
 - [x] Java API matches above; `./gradlew build` green
 - [x] Documented consume path: Runner `implementation`, Spec `compileOnly`
 - [x] First version publishable (GitHub Packages or documented `mavenLocal` for bootstrap)
-- [x] `xq-terminal` Spec points here (not `xq-qe-box/packages/runner-sdk`)
+- [x] `xq-terminal` Spec points here (not `xq-qe-box/packages/…`)
 
 ## Tracer-bullet Tickets
 
-1. [#23](https://github.com/ExperienceQuality/xq-hub/issues/23) — Bootstrap Satellite + Java API + publish
-2. Consumers: Terminal (#17+) and example Spec (#22) depend on published SDK (blocked by #23)
+1. [#23](https://github.com/ExperienceQuality/xq-hub/issues/23) — Bootstrap Satellite + Java API + publish (renamed to `xq-terminal-sdk`)
+2. Consumers: Terminal (#17+) and example Spec (#22) depend on published SDK

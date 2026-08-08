@@ -35,7 +35,7 @@ xq-qe-box/
 └── packages/                        # reserved
 ```
 
-**`runner-sdk`** lives in Satellite [`xq-runner-sdk`](xq-runner-sdk.md) — not under this monorepo. Terminal depends on it as a normal library; Specs `compileOnly`.
+**`xq-terminal-sdk`** lives in Satellite [`xq-terminal-sdk`](xq-terminal-sdk.md) — not under this monorepo. Terminal depends on it as a normal library; Specs `compileOnly`.
 
 ### Primary CLI: xq-motest
 
@@ -56,7 +56,7 @@ Five skills under `skills/quality-*` enforce Hub [`quality/`](../../quality/READ
 
 ### Terminal (TAP-like boarding)
 
-[`xq-terminal` Spec](xq-terminal.md): CLI runner/controller that scans a Satellite CI **passport** (small/medium) for merge boarding, and for release boarding runs large tests via an in-box **sandbox** (stub v1) against `ipa`/`apk`/service artifacts. Shared plugin API: [`xq-runner-sdk`](xq-runner-sdk.md).
+[`xq-terminal` Spec](xq-terminal.md): CLI runner/controller that scans a Satellite CI **passport** (small/medium) for merge boarding, and for release boarding runs large tests via an in-box **sandbox** (stub v1) against `ipa`/`apk`/service artifacts. Shared plugin API: [`xq-terminal-sdk`](xq-terminal-sdk.md).
 
 ### Skills (`gh skill` / registry)
 

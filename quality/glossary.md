@@ -17,4 +17,4 @@ Use these terms in ephemeral strategy/plans and when naming sizes/stages. Prefer
 | **Terminal** | `xq-terminal` JVM admission CLI (TAP-like gateway): passport scan, remote Spec plugins, merge/release boarding. | Google’s internal TAP binary; Python Terminal |
 | **Passport** | CI artifact JSON of planned (`dryRunTotal`) + passed/failed/quarantined small+medium results for an asset+sha. | Committed living scorecard; line-% alone |
 | **Sandbox** | Org env (v1 stub in `xq-qe-box`) where release-gate large tests / Specs run against ipa/apk/service. | Per-dev laptop-only ad hoc env (when you mean the platform) |
-| **RunnerSpec** | JVM plugin contract in Satellite `xq-runner-sdk`; Specs ship as remote fat JARs (Release URL + sha256) loaded at runtime. | Hub markdown Spec; Runner `implementation` of a Spec; Maven coord resolve for Spec plugins |
+| **RunnerSpec** | JVM plugin contract in Satellite `xq-terminal-sdk`; Specs ship as remote fat JARs (Release URL + sha256) loaded at runtime. | Hub markdown Spec; Runner `implementation` of a Spec; Maven coord resolve for Spec plugins |
