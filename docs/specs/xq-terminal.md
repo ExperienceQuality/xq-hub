@@ -24,8 +24,9 @@ Ship **`xq-terminal`** inside **`xq-qe-box`** as a **JVM Runner + controller CLI
 | Distribution | **JVM app** (`installDist` / `run`) — **not** native binary |
 | JSON / passport | **Jackson** |
 | Plugin model | Shared **`runner-sdk`** + remote Spec fat JARs + **ServiceLoader** + isolated **ClassLoader** |
+| Spec publish | **GitHub Release asset** (fat JAR URL) + **sha256** pin — not Maven/GitHub Packages for v1 |
 
-**Not used:** Python / uv / Fire / httpimport for the Terminal core. (`xq-motest` stays Swift.)
+**Not used:** Python / uv / Fire / httpimport for the Terminal core; Maven coordinate resolve / GitHub Packages Maven registry as the Spec load path. (`xq-motest` stays Swift.)
 
 ```
                     passport.json (CI artifact)
@@ -72,7 +73,7 @@ xq-qe-box/
 │       ├── cli/                  # Picocli commands only
 │       ├── services/             # BoardService, SpecLoadService, …
 │       ├── models/               # Passport, BoardResult (Jackson)
-│       └── adapters/             # PassportFileAdapter, StubSandbox, Maven/URL resolver, ClassLoader
+│       └── adapters/             # PassportFileAdapter, StubSandbox, Url+Sha256 resolver, ClassLoader
 ├── packages/sandbox/             # stub provisioner API (v1); real backends later
 ├── skills/xq-terminal/
 ├── cli/xq-motest/                # existing Swift
@@ -98,21 +99,21 @@ Two roles:
 
 | Role | Knows | Does not |
 | --- | --- | --- |
-| **Runner** (`xq-terminal`) | `runner-sdk`, artifact resolve, ClassLoader, ServiceLoader, board/passport | Individual Spec Maven coords as `implementation` deps |
-| **Spec** (e.g. payment-spec) | Implements `RunnerSpec`, owns OkHttp/Jackson/…, builds fat JAR, publishes | Coupling into Runner `build.gradle` |
+| **Runner** (`xq-terminal`) | `runner-sdk`, URL+sha256 fetch/cache, ClassLoader, ServiceLoader, board/passport | Specs as `implementation` deps; Maven registry resolve |
+| **Spec** (e.g. payment-spec) | Implements `RunnerSpec`, owns OkHttp/Jackson/…, builds fat JAR, publishes as **Release asset** | Coupling into Runner `build.gradle` |
 
 ```
 Spec project                         Runner project
 ------------                         --------------
 runner-sdk (compileOnly)             runner-sdk
 okhttp, jackson, …                  plugin loader
-     | build fat JAR                 artifact resolver
+     | build fat JAR                 URL + sha256 resolver
      v
 payment-spec-all.jar
-     | publish
+     | attach to GitHub Release
      v
-Remote registry / URL
-     | runtime resolution
+https://github.com/…/releases/download/v1.2.3/payment-spec-all.jar
+     | GET → sha256 verify → cache
      v
 Runner → ClassLoader → ServiceLoader → RunnerSpec.run()
 ```
@@ -124,13 +125,24 @@ Runner → ClassLoader → ServiceLoader → RunnerSpec.run()
 implementation("com.myorg.specs:payment-spec:1.4.0")
 ```
 
-Pass at runtime:
+**Locked Spec pin (v1):** URL + sha256 only. No `--spec` Maven coordinates.
 
 ```text
-xq-terminal board … --spec com.myorg.specs:payment-spec:1.4.0
-# or
-xq-terminal board … --spec-url https://…/payment-spec-all.jar
+xq-terminal board … \
+  --spec-url https://github.com/org/repo/releases/download/v1.2.3/payment-spec-all.jar \
+  --spec-sha256 <hex>
 ```
+
+Optional Spec Index entry (config or future index file):
+
+```json
+{
+  "url": "https://github.com/org/repo/releases/download/v1.2.3/payment-spec-all.jar",
+  "sha256": "<hex>"
+}
+```
+
+`file://` URLs allowed for local/dev; sha256 still required unless a documented test-only escape hatch.
 
 ### Shared contract (`runner-sdk`)
 
@@ -175,7 +187,9 @@ Runner ClassLoader
 
 Delegate to parent: `java.*`, runner API packages. Prefer **child-first** for plugin classes/deps (custom ClassLoader; default `URLClassLoader` is parent-first and insufficient for conflicting deps).
 
-Production load path: resolve → **download/cache + integrity check** → `URLClassLoader` from local file → `ServiceLoader.load(RunnerSpec.class, loader)`.
+Production load path: **`--spec-url` + `--spec-sha256`** → download (or cache hit) → **verify SHA-256** (fail closed on mismatch) → `URLClassLoader` from local file → `ServiceLoader.load(RunnerSpec.class, loader)`.
+
+Cache key: sha256 (content-addressed under e.g. `~/.cache/xq-terminal/specs/<sha256>/…`). Never load a JAR whose digest does not match the pin.
 
 ### Passport contract
 
@@ -237,11 +251,11 @@ xq-terminal board \
   --sha <git-sha> \
   --reports <dir-or-passport.json> \
   [--artifact <path-or-ref>] \
-  [--spec <maven-coord> | --spec-url <jar-url>]
+  [--spec-url <jar-url> --spec-sha256 <hex>]
 ```
 
-- **merge:** passport required; `--spec` optional (usually unused).
-- **release:** `--artifact` required; `--spec` / `--spec-url` required for large Spec invocation (v1).
+- **merge:** passport required; Spec flags unused.
+- **release:** `--artifact` required; `--spec-url` **and** `--spec-sha256` required for Spec load (v1).
 
 Stdout: agent-native JSON (`qualified`, `passRatio`, `reasons`, Spec message when run).
 
@@ -260,10 +274,10 @@ Skill: run `xq-terminal board`, interpret JSON; do not reimplement passport rule
 ### Developer experience (Specs)
 
 ```
-implement RunnerSpec → add deps → fat JAR → publish
+implement RunnerSpec → add deps → fat JAR → GitHub Release asset + publish sha256 → pin in CI/index
 ```
 
-No Runner rebuild / no Spec `implementation` in Runner Gradle / no ServiceLoader hardcoding of Spec classes.
+No Runner rebuild / no Spec `implementation` in Runner Gradle / no ServiceLoader hardcoding of Spec classes / no Maven Packages resolve in the Runner.
 
 ## Out of scope (v1)
 
@@ -273,7 +287,8 @@ No Runner rebuild / no Spec `implementation` in Runner Gradle / no ServiceLoader
 - Full multi-tenant sandbox
 - New Satellite solely for Terminal
 - Replacing `xq-motest`
-- In-process loading of untrusted Specs without pin/cache/integrity
+- In-process loading of Specs without **URL + sha256** pin/cache/verify
+- Maven / GitHub Packages as Spec resolve path (v1)
 - **Native binary** shipping (GraalVM Native Image, Kotlin/Native, or jpackage as a v1 deliverable) — JVM distribution only
 
 ## Acceptance (Spec-level)
@@ -281,17 +296,17 @@ No Runner rebuild / no Spec `implementation` in Runner Gradle / no ServiceLoader
 - [ ] `runner-sdk` published/consumed; example Spec fat JAR loads via ServiceLoader from Runner
 - [ ] `xq-terminal board --gate merge` fixture passport (pass / fail / quarantine / bad accounting)
 - [ ] Accounting enforced
-- [ ] `board --gate release` with stub sandbox + `--spec-url` (or coord) returns qualified/not
+- [ ] `board --gate release` with stub sandbox + `--spec-url` + `--spec-sha256` returns qualified/not; mismatch fails closed
 - [ ] Specs are **not** Runner `implementation` dependencies
 - [ ] Skill `xq-terminal` installable via `gh skill`
 - [ ] Hub Idea collapsed; linked from `xq-qe-box` Spec
-- [x] Tracer Tickets #17–#21 (amend bodies for JVM stack)
+- [x] Tracer Tickets #17–#22 (JVM stack; Spec pin = Release URL + sha256)
 
 ## Tracer-bullet Tickets
 
 1. [#17](https://github.com/ExperienceQuality/xq-hub/issues/17) — `runner-sdk` + passport models + `board --gate merge`
 2. [#18](https://github.com/ExperienceQuality/xq-hub/issues/18) — Skill `xq-terminal` + README
-3. [#19](https://github.com/ExperienceQuality/xq-hub/issues/19) — Stub sandbox + Spec ClassLoader load + `board --gate release`
+3. [#19](https://github.com/ExperienceQuality/xq-hub/issues/19) — Stub sandbox + Spec ClassLoader load (`--spec-url` + `--spec-sha256`) + `board --gate release`
 4. [#20](https://github.com/ExperienceQuality/xq-hub/issues/20) — Satellite CI emits `passport.json`
 5. [#21](https://github.com/ExperienceQuality/xq-hub/issues/21) — Real sandbox backend (later)
-6. [#22](https://github.com/ExperienceQuality/xq-hub/issues/22) — Example Spec fat JAR (ServiceLoader + publish)
+6. [#22](https://github.com/ExperienceQuality/xq-hub/issues/22) — Example Spec fat JAR (ServiceLoader + GitHub Release + sha256)
