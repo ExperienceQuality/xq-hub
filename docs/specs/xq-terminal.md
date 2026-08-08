@@ -1,201 +1,382 @@
 # Spec: xq-terminal
 
-**Status:** Active — **Python-only** buildable plan.
+**Status:** Active — **Python-only**, code-level plan for CLI in `xq-qe-box`.
 
-**Related:** [`docs/ideas/xq-terminal.md`](../ideas/xq-terminal.md) · [`docs/specs/xq-qe-box.md`](xq-qe-box.md) · [`docs/specs/xq-terminal-sdk.md`](xq-terminal-sdk.md) · [`docs/specs/xq-terminal-registry.md`](xq-terminal-registry.md) · Hub [`quality/`](../../quality/README.md)
-
-**Pivot:** JVM / fat JAR / ClassLoader / Release URL+sha256 Spec loading is **descoped**. Product path is Python wheels + registry meta-package.
+**Related:** [`xq-terminal-sdk.md`](xq-terminal-sdk.md) · [`xq-terminal-registry.md`](xq-terminal-registry.md) · [`xq-terminal-spec-wheel.md`](xq-terminal-spec-wheel.md) · [`xq-qe-box.md`](xq-qe-box.md)
 
 ## Problem
 
-XQ needs a TAP-like **admission gate**: given a shippable **asset**, decide whether it may **merge** or **release**, based on small/medium evidence and (for release) large tests in a sandbox against the real artifact. Asset-specific large/release logic must be addable without rebuilding Terminal or putting Spec dependency trees into the Runner.
+Admission gate: **merge** / **release** from passport + (release) sandbox Spec — without Spec deps on the Runner.
 
 ## Solution
 
-Ship **`xq-terminal`** (Python CLI) in **`xq-qe-box`**. Metaphor: airport Terminal — passport → board merge or release plane.
-
-**Tech stack (locked — Python only):**
+Python CLI package **`xq-terminal`** under `xq-qe-box/cli/xq-terminal/`.
 
 | Layer | Choice |
 | --- | --- |
-| Language | **Python 3.11+** |
-| Tooling | **uv** + `pyproject.toml` |
-| CLI | Thin edge (**Typer** recommended) → services |
-| Passport models | **Pydantic** |
-| Spec protocol | Satellite **`xq-terminal-sdk`** (Python package) |
-| Spec plugins | Separate **wheels** (`login-spec`, `payment-spec`, …) + entry points |
-| Spec intake | Satellite **`xq-terminal-registry`**: authors register in **YAML** → CI **sanitizes** → generates registry `pyproject.toml` deps → publishes meta-package |
-| Terminal deps | **`xq-terminal-registry`** only (pinned version) for Specs — not individual Spec wheels |
-| Distribution | Installable CLI (`uv tool` / pipx / `pip install`) |
+| Python | **3.11+** / **uv** |
+| CLI | **Typer** → services (no logic in CLI module) |
+| Models | **Pydantic v2** |
+| Specs | `xq-terminal-registry` only (`get_spec`) |
+| Sandbox | Port + stub adapter in `packages/sandbox` or `xq_terminal/adapters` |
 
-**Not used:** JVM, Gradle, ClassLoader, ServiceLoader, fat JAR Specs, Maven/`--spec-url`+sha256 Spec load path. (`xq-motest` stays Swift.)
+### Tree
 
 ```
-                    passport.json (CI artifact)
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────┐
-│  xq-terminal (Python)                                   │
-│  board --gate merge|release --asset --sha --reports …   │
-│  [release] get_spec(id) from xq-terminal-registry       │
-└─────────────┬─────────────────────────────┬─────────────┘
-              │                             │
-     merge: scan passport            release: passport OK
-     failed==0 (quarantine OK)              │
-              │                             ▼
-              │                    stub sandbox (v1)
-              │                    + registry.get_spec(…).run(ctx)
-              ▼                             ▼
-         JSON: qualified | not qualified + reasons
+xq-qe-box/cli/xq-terminal/
+├── pyproject.toml
+├── README.md
+├── src/xq_terminal/
+│   ├── __init__.py
+│   ├── __main__.py              # python -m xq_terminal
+│   ├── cli.py                   # Typer app only
+│   ├── models/
+│   │   ├── passport.py          # Pydantic Passport
+│   │   └── board.py             # BoardResult
+│   ├── services/
+│   │   ├── board.py             # BoardService
+│   │   └── passport.py          # load + validate + accounting
+│   └── adapters/
+│       ├── passport_fs.py       # path/dir → Passport
+│       ├── sandbox.py           # SandboxPort + StubSandbox
+│       └── registry_specs.py    # thin wrap get_spec
+└── tests/
+    ├── fixtures/
+    │   ├── passport_ok.json
+    │   ├── passport_fail.json
+    │   ├── passport_quarantine.json
+    │   └── passport_bad_accounting.json
+    ├── test_merge.py
+    └── test_release.py
 ```
 
-### Product gates
+### `pyproject.toml`
 
-| Gate | Requires | Decision |
-| --- | --- | --- |
-| **merge** | Passport (small+medium) | `failed == 0` (quarantined allowed) |
-| **release** | Passport OK **+** artifact **+** sandbox + Spec via registry | Passport rule, then Spec green |
+```toml
+[project]
+name = "xq-terminal"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "typer>=0.12",
+  "pydantic>=2",
+  "xq-terminal-registry==0.1.0",   # pin; pulls Specs transitively
+]
+# FORBIDDEN: login-spec, payment-spec as direct deps
 
-`passRatio` is **informational** only.
+[project.scripts]
+xq-terminal = "xq_terminal.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+```
 
 ---
 
-## Architecture
+## Models (code-level)
 
-### Repos / packages
+### `models/passport.py`
 
-| Piece | Satellite / home | Role |
-| --- | --- | --- |
-| Protocol | [`xq-terminal-sdk`](xq-terminal-sdk.md) | `RunnerSpec` / `SpecContext` / `SpecResult` |
-| Registry | [`xq-terminal-registry`](xq-terminal-registry.md) | YAML sanitize → generated deps → meta-wheel |
-| Specs | N repos (or packages) | Publish wheels; entry point `xq_terminal.specs` |
-| Runner | `xq-qe-box` / `cli/xq-terminal` | `board` CLI; depends on registry (+ sdk as needed) |
+```python
+from __future__ import annotations
+from datetime import datetime
+from typing import Literal
+from pydantic import BaseModel, Field, model_validator
 
-```
-xq-terminal-sdk/                 # Python protocol wheel
-xq-terminal-registry/            # specs.yaml → sanitize → pyproject deps → get_spec()
-login-spec/, payment-spec/, …    # Spec wheels (dependencies of registry)
+class SuiteResult(BaseModel):
+    name: str
+    size: Literal["small", "medium", "large"]
+    dryRunTotal: int = Field(ge=0)
+    passed: int = Field(ge=0)
+    failed: int = Field(ge=0)
+    quarantined: int = Field(ge=0)
+    status: Literal["passed", "failed", "quarantined"]
+    owner: str | None = None
+    expiresAt: datetime | None = None
 
-xq-qe-box/
-├── cli/xq-terminal/             # Python Terminal (Typer → services)
-├── packages/sandbox/            # stub provisioner (v1)
-├── skills/xq-terminal/
-├── cli/xq-motest/               # Swift (unchanged)
-└── skills/quality-*/
-```
+    @model_validator(mode="after")
+    def suite_accounting(self) -> SuiteResult:
+        if self.passed + self.failed + self.quarantined != self.dryRunTotal:
+            raise ValueError("suite accounting mismatch")
+        if self.status == "quarantined" and (not self.owner or not self.expiresAt):
+            raise ValueError("quarantined suite needs owner + expiresAt")
+        return self
 
-### Core principle
+class Counts(BaseModel):
+    dryRunTotal: int = Field(ge=0)
+    passed: int = Field(ge=0)
+    failed: int = Field(ge=0)
+    quarantined: int = Field(ge=0)
 
-> Specs are **not** Terminal dependencies. They are **registry** dependencies (after YAML sanitize). Terminal imports the registry only.
+class Coverage(BaseModel):
+    passRatio: float
 
-```text
-WRONG:  xq-terminal pyproject depends on payment-spec
-RIGHT:  specs.yaml → sanitize → xq-terminal-registry depends on payment-spec==…
-        xq-terminal depends on xq-terminal-registry==…
-```
+class Passport(BaseModel):
+    asset: str
+    sha: str
+    gate: Literal["merge", "release"]
+    generatedAt: datetime | None = None
+    counts: Counts
+    coverage: Coverage | None = None
+    suites: list[SuiteResult] = []
 
-### Release Spec selection
+    @model_validator(mode="after")
+    def root_accounting(self) -> Passport:
+        c = self.counts
+        if c.passed + c.failed + c.quarantined != c.dryRunTotal:
+            raise ValueError("passport accounting mismatch")
+        expected = c.passed / c.dryRunTotal if c.dryRunTotal else 0.0
+        if self.coverage is None:
+            self.coverage = Coverage(passRatio=expected)
+        return self
 
-```bash
-xq-terminal board \
-  --asset <id> \
-  --gate release \
-  --sha <git-sha> \
-  --reports <passport.json> \
-  --artifact <path-or-ref> \
-  --spec <spec-id>              # e.g. payment-spec
-  # optional: --registry-version pin already in Terminal env/install
-```
-
-Terminal: `from xq_terminal_registry import get_spec` → `get_spec(spec_id).run(ctx)`.
-
-### Passport contract
-
-Unchanged schema vs prior Spec — Satellite CI artifact; Terminal only scans.
-
-```json
-{
-  "asset": "ios-app",
-  "sha": "<git-sha>",
-  "gate": "merge",
-  "generatedAt": "<iso8601>",
-  "counts": {
-    "dryRunTotal": 120,
-    "passed": 110,
-    "failed": 5,
-    "quarantined": 5
-  },
-  "coverage": { "passRatio": 0.9167 },
-  "suites": []
-}
+    @property
+    def pass_ratio(self) -> float:
+        c = self.counts
+        return 0.0 if c.dryRunTotal == 0 else c.passed / c.dryRunTotal
 ```
 
-Rules: `passed + failed + quarantined == dryRunTotal`; qualify iff `failed == 0`; quarantined needs owner + expiry when used.
+### `models/board.py`
+
+```python
+from pydantic import BaseModel
+
+class SpecOutcome(BaseModel):
+    id: str
+    success: bool
+    message: str
+
+class BoardResult(BaseModel):
+    gate: str
+    asset: str
+    sha: str
+    qualified: bool
+    passRatio: float
+    reasons: list[str]
+    spec: SpecOutcome | None = None
+```
+
+---
+
+## Services (code-level)
+
+### `services/passport.py`
+
+```python
+def load_passport(path: Path) -> Passport:
+    """If path is dir, use path / 'passport.json'."""
+    ...
+
+def merge_qualified(passport: Passport) -> tuple[bool, list[str]]:
+    if passport.counts.failed == 0:
+        return True, ["passport failed==0"]
+    return False, ["passport not clear: failed > 0"]
+```
+
+### `services/board.py`
+
+```python
+class BoardService:
+    def __init__(self, sandbox: SandboxPort, specs: SpecPort):
+        self._sandbox = sandbox
+        self._specs = specs
+
+    def board_merge(self, *, asset: str, sha: str, reports: Path) -> BoardResult:
+        passport = load_passport(reports)
+        self._assert_identity(passport, asset, sha)
+        ok, reasons = merge_qualified(passport)
+        return BoardResult(
+            gate="merge", asset=asset, sha=sha,
+            qualified=ok, passRatio=passport.pass_ratio, reasons=reasons,
+        )
+
+    def board_release(
+        self, *, asset: str, sha: str, reports: Path,
+        artifact: str, spec_id: str,
+    ) -> BoardResult:
+        passport = load_passport(reports)
+        self._assert_identity(passport, asset, sha)
+        ok, reasons = merge_qualified(passport)
+        if not ok:
+            return BoardResult(
+                gate="release", asset=asset, sha=sha,
+                qualified=False, passRatio=passport.pass_ratio,
+                reasons=["passport blocked release", *reasons],
+            )
+        handle = self._sandbox.provision(artifact=artifact, asset=asset)
+        try:
+            from xq_terminal_sdk import SpecContext
+            ctx = SpecContext(
+                environment=handle.environment,
+                run_id=handle.run_id,
+                asset=asset,
+                sha=sha,
+                gate="release",
+                artifact_ref=artifact,
+            )
+            spec = self._specs.get(spec_id)
+            result = spec.run(ctx)
+            return BoardResult(
+                gate="release", asset=asset, sha=sha,
+                qualified=result.success,
+                passRatio=passport.pass_ratio,
+                reasons=["passport + spec ok"] if result.success else ["spec failed"],
+                spec=SpecOutcome(id=spec.name(), success=result.success, message=result.message),
+            )
+        finally:
+            self._sandbox.teardown(handle)
+```
+
+### Adapters
+
+```python
+# adapters/registry_specs.py
+from xq_terminal_registry import get_spec
+
+class RegistrySpecPort:
+    def get(self, spec_id: str):
+        return get_spec(spec_id)
+
+# adapters/sandbox.py
+@dataclass
+class SandboxHandle:
+    environment: str
+    run_id: str
+
+class SandboxPort(Protocol):
+    def provision(self, *, artifact: str, asset: str) -> SandboxHandle: ...
+    def teardown(self, handle: SandboxHandle) -> None: ...
+
+class StubSandbox:
+    def provision(self, *, artifact: str, asset: str) -> SandboxHandle:
+        return SandboxHandle(environment="stub", run_id="stub-1")
+    def teardown(self, handle: SandboxHandle) -> None:
+        return None
+```
+
+---
+
+## CLI (code-level)
+
+```python
+# cli.py
+import json, sys
+import typer
+from pathlib import Path
+from xq_terminal.services.board import BoardService
+from xq_terminal.adapters.sandbox import StubSandbox
+from xq_terminal.adapters.registry_specs import RegistrySpecPort
+
+app = typer.Typer(add_completion=False)
+
+@app.command("board")
+def board(
+    asset: str = typer.Option(...),
+    gate: str = typer.Option(..., help="merge|release"),
+    sha: str = typer.Option(...),
+    reports: Path = typer.Option(...),
+    artifact: str | None = typer.Option(None),
+    spec: str | None = typer.Option(None, help="registry Spec id"),
+) -> None:
+    svc = BoardService(StubSandbox(), RegistrySpecPort())
+    if gate == "merge":
+        result = svc.board_merge(asset=asset, sha=sha, reports=reports)
+    elif gate == "release":
+        if not artifact or not spec:
+            raise typer.BadParameter("release requires --artifact and --spec")
+        result = svc.board_release(
+            asset=asset, sha=sha, reports=reports,
+            artifact=artifact, spec_id=spec,
+        )
+    else:
+        raise typer.BadParameter("gate must be merge|release")
+    typer.echo(result.model_dump_json(indent=2))
+    raise SystemExit(0 if result.qualified else 1)
+
+def main() -> None:
+    app()
+
+# for [project.scripts]
+# typer apps: app() is invoked as console script target — use callback pattern if needed
+```
 
 ### CLI contract
 
-Env: `XQ_TERMINAL_*`.
-
 ```bash
 xq-terminal board \
-  --asset <id> \
-  --gate merge|release \
-  --sha <git-sha> \
-  --reports <dir-or-passport.json> \
-  [--artifact <path-or-ref>] \
-  [--spec <spec-id>]
+  --asset demo-app \
+  --gate merge \
+  --sha abc123 \
+  --reports dist/quality/passport.json
+
+xq-terminal board \
+  --asset demo-app \
+  --gate release \
+  --sha abc123 \
+  --reports dist/quality/passport.json \
+  --artifact dist/app.ipa \
+  --spec payment-spec
 ```
 
-- **merge:** passport only.  
-- **release:** `--artifact` + `--spec` required (v1).  
+Env prefix: `XQ_TERMINAL_*` (reserved; unused in v1 beyond future config).
 
-Stdout: agent-native JSON (`qualified`, `passRatio`, `reasons`, Spec message).
+### Stdout JSON
 
-### Sandbox (v1 stub)
+```json
+{
+  "gate": "release",
+  "asset": "demo-app",
+  "sha": "abc123",
+  "qualified": true,
+  "passRatio": 0.9,
+  "reasons": ["passport + spec ok"],
+  "spec": { "id": "payment-spec", "success": true, "message": "payment checks ok" }
+}
+```
 
-Stub provisioner in-box; then `get_spec(…).run(ctx)`. Real backends later. DeviceKit / `xq-motest` unchanged (ADR-0001).
+Exit: `0` qualified, `1` not qualified, `2` usage/validation error.
 
-### Skills
+---
+
+## Product gates
+
+| Gate | Code path | Decision |
+| --- | --- | --- |
+| merge | `board_merge` | `counts.failed == 0` |
+| release | passport then sandbox + `get_spec(id).run` | both green |
+
+`passRatio` informational only.
+
+---
+
+## Skills
 
 ```bash
 gh skill install ExperienceQuality/xq-qe-box xq-terminal
 ```
 
-### Spec author flow
-
-```text
-implement Spec (sdk protocol) → publish wheel + entry point
-  → PR pin into registry specs.yaml
-  → sanitize CI → registry release
-  → Terminal (already on registry) can --spec <id>
-```
-
 ## Out of scope (v1)
 
-- JVM / Kotlin Terminal or Specs  
-- Per-board `--spec-url` / sha256 ClassLoader path  
-- Soft-qualify on `passRatio` while `failed > 0`  
-- Full multi-tenant sandbox  
-- Replacing `xq-motest`  
-- Authors editing registry `pyproject.toml` by hand  
+- JVM / `--spec-url` / sha256 ClassLoader  
+- Soft-qualify on passRatio  
+- Real sandbox (#21)  
+- Direct Spec deps on Terminal  
 
 ## Acceptance
 
-- [ ] Python `xq-terminal-sdk` protocol published  
-- [ ] Registry: YAML → sanitize → generated deps → `get_spec`  
-- [ ] `board --gate merge` fixtures (pass / fail / quarantine / bad accounting)  
-- [ ] `board --gate release` with stub sandbox + `--spec` via registry  
-- [ ] Terminal does **not** depend on individual Spec wheels  
-- [ ] Skill installable via `gh skill`  
-- [x] Pivot from JVM documented; Python registry Idea collapsed into Specs  
+- [ ] Merge fixtures green (#17)  
+- [ ] Release via registry `#19` + example Spec `#22` + registry `#25`  
+- [ ] `pyproject` has no Spec wheel deps  
+- [ ] Skill (#18)  
 
-## Tracer-bullet Tickets
+## Tracer Tickets
 
-1. [#24](https://github.com/ExperienceQuality/xq-hub/issues/24) — Python `xq-terminal-sdk` rewrite (supersedes Java #23)  
-2. [#17](https://github.com/ExperienceQuality/xq-hub/issues/17) — passport + `board --gate merge`  
-3. [#25](https://github.com/ExperienceQuality/xq-hub/issues/25) — Registry YAML sanitize + meta-package  
-4. [#22](https://github.com/ExperienceQuality/xq-hub/issues/22) — example Spec wheel (`login-spec` or `payment-spec`)  
-5. [#19](https://github.com/ExperienceQuality/xq-hub/issues/19) — stub sandbox + release via `get_spec`  
-6. [#18](https://github.com/ExperienceQuality/xq-hub/issues/18) — skill + README  
-7. [#20](https://github.com/ExperienceQuality/xq-hub/issues/20) — CI emits passport  
-8. [#21](https://github.com/ExperienceQuality/xq-hub/issues/21) — real sandbox (later)  
+1. [#24](https://github.com/ExperienceQuality/xq-hub/issues/24) — sdk  
+2. [#17](https://github.com/ExperienceQuality/xq-hub/issues/17) — merge  
+3. [#25](https://github.com/ExperienceQuality/xq-hub/issues/25) — registry  
+4. [#22](https://github.com/ExperienceQuality/xq-hub/issues/22) — Spec wheel  
+5. [#19](https://github.com/ExperienceQuality/xq-hub/issues/19) — release  
+6. [#18](https://github.com/ExperienceQuality/xq-hub/issues/18) — skill  
+7. [#20](https://github.com/ExperienceQuality/xq-hub/issues/20) — passport CI  
+8. [#21](https://github.com/ExperienceQuality/xq-hub/issues/21) — real sandbox  
