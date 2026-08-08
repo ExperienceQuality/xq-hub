@@ -9,7 +9,9 @@ Hub index of Satellites. Ticket labels mirror this table. Do not copy product gl
 | xq-financial-app | https://github.com/ExperienceQuality/xq-financial-app | Financial product application | `satellite:xq-financial-app` |
 | xq-versastacks | https://github.com/ExperienceQuality/xq-versastacks | Versastacks system | `satellite:xq-versastacks` |
 | xq-context-hub | https://github.com/ExperienceQuality/xq-context-hub | Legacy / prior context hub (clarify or retire) | `satellite:xq-context-hub` |
-| xq-qe-box | https://github.com/ExperienceQuality/xq-qe-box | Agent-native QE monorepo — xq-motest (DeviceKit-direct CLI), skills; optional agent-device | `satellite:xq-qe-box` |
+| xq-qe-box | https://github.com/ExperienceQuality/xq-qe-box | Agent-native QE monorepo — xq-motest (DeviceKit-direct CLI), skills; xq-terminal (Python); optional agent-device | `satellite:xq-qe-box` |
+| xq-terminal-sdk | https://github.com/ExperienceQuality/xq-terminal-sdk | Python `RunnerSpec` protocol for xq-terminal Specs (Java API retired) | `satellite:xq-terminal-sdk` |
+| xq-terminal-registry | https://github.com/ExperienceQuality/xq-terminal-registry | YAML Spec intake → sanitize → meta-package of Spec wheel deps | `satellite:xq-terminal-registry` |
 
 Add a row when a Satellite joins the org. Create the matching GitHub label on this Hub repo before filing Tickets against it. Tighten purpose lines when each Satellite’s own `CONTEXT.md` exists.
 

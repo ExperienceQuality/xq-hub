@@ -41,3 +41,7 @@ _Avoid_: Session log, ticket dump, inbox, queue (ready work is a Ticket)
 ## Quality (org testing method)
 
 Normative docs live under Hub `quality/`. Vocabulary (asset, component, capability, attribute, spot, test sizes) is defined in [`quality/glossary.md`](quality/glossary.md). Agents conform via `quality-*` skills installed from Satellite `xq-qe-box` (`gh skill install`), not via Satellite-local quality binders.
+
+**Terminal** (`xq-terminal`):
+TAP-like admission **Python** CLI in `xq-qe-box`: asset checks in with a **passport** (small/medium results JSON); output is **qualified / not** to board the **merge** or **release** plane. Release Specs come from Satellite **`xq-terminal-registry`** (YAML sanitize → Spec wheels as registry pip deps); Terminal does not depend on Specs directly. Protocol: **`xq-terminal-sdk`**. Spec: [`docs/specs/xq-terminal.md`](docs/specs/xq-terminal.md).
+_Avoid_: Google TAP product clone; JVM Terminal/Specs; declaring Specs as Terminal dependencies; hand-edited registry `pyproject.toml`
