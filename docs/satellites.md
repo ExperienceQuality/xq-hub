@@ -10,6 +10,7 @@ Hub index of Satellites. Ticket labels mirror this table. Do not copy product gl
 | xq-versastacks | https://github.com/ExperienceQuality/xq-versastacks | Versastacks system | `satellite:xq-versastacks` |
 | xq-context-hub | https://github.com/ExperienceQuality/xq-context-hub | Legacy / prior context hub (clarify or retire) | `satellite:xq-context-hub` |
 | xq-qe-box | https://github.com/ExperienceQuality/xq-qe-box | Agent-native QE monorepo — xq-motest (DeviceKit-direct CLI), skills; optional agent-device | `satellite:xq-qe-box` |
+| xq-runner-sdk | https://github.com/ExperienceQuality/xq-runner-sdk | Java `RunnerSpec` API library for Terminal Runner + remote Specs | `satellite:xq-runner-sdk` |
 
 Add a row when a Satellite joins the org. Create the matching GitHub label on this Hub repo before filing Tickets against it. Tighten purpose lines when each Satellite’s own `CONTEXT.md` exists.
 

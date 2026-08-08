@@ -20,7 +20,6 @@ xq-qe-box/
 ├── README.md
 ├── cli/xq-motest/                   # Swift CLI → DeviceKit (from xq-ios-act)
 ├── cli/xq-terminal/                 # JVM Terminal / Spec Runner (see xq-terminal Spec)
-├── packages/runner-sdk/             # shared RunnerSpec API
 ├── packages/sandbox/                # Terminal sandbox provisioner (stub v1)
 ├── skills/
 │   ├── xq-motest/                   # skill for DeviceKit-direct CLI
@@ -35,6 +34,8 @@ xq-qe-box/
 │   └── quality-controlling/
 └── packages/                        # reserved
 ```
+
+**`runner-sdk`** lives in Satellite [`xq-runner-sdk`](xq-runner-sdk.md) — not under this monorepo. Terminal depends on it as a normal library; Specs `compileOnly`.
 
 ### Primary CLI: xq-motest
 
@@ -55,7 +56,7 @@ Five skills under `skills/quality-*` enforce Hub [`quality/`](../../quality/READ
 
 ### Terminal (TAP-like boarding)
 
-[`xq-terminal` Spec](xq-terminal.md): CLI runner/controller that scans a Satellite CI **passport** (small/medium) for merge boarding, and for release boarding runs large tests via an in-box **sandbox** (stub v1) against `ipa`/`apk`/service artifacts.
+[`xq-terminal` Spec](xq-terminal.md): CLI runner/controller that scans a Satellite CI **passport** (small/medium) for merge boarding, and for release boarding runs large tests via an in-box **sandbox** (stub v1) against `ipa`/`apk`/service artifacts. Shared plugin API: [`xq-runner-sdk`](xq-runner-sdk.md).
 
 ### Skills (`gh skill` / registry)
 

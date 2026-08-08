@@ -1,8 +1,8 @@
 # Spec: xq-terminal
 
-**Status:** Active — buildable plan for Satellite `xq-qe-box`.
+**Status:** Active — buildable plan for Satellite `xq-qe-box` (CLI) + `xq-runner-sdk` (API).
 
-**Related:** [`docs/ideas/xq-terminal.md`](../ideas/xq-terminal.md) · [`docs/specs/xq-qe-box.md`](xq-qe-box.md) · Hub [`quality/`](../../quality/README.md) · quality skills in `xq-qe-box`
+**Related:** [`docs/ideas/xq-terminal.md`](../ideas/xq-terminal.md) · [`docs/specs/xq-qe-box.md`](xq-qe-box.md) · [`docs/specs/xq-runner-sdk.md`](xq-runner-sdk.md) · Hub [`quality/`](../../quality/README.md) · quality skills in `xq-qe-box`
 
 ## Problem
 
@@ -18,13 +18,14 @@ Ship **`xq-terminal`** inside **`xq-qe-box`** as a **JVM Runner + controller CLI
 
 | Layer | Choice |
 | --- | --- |
-| Language | **JVM 17+** — `runner-sdk` as **Java** interfaces; Runner CLI **Java or Kotlin** |
+| Language | **JVM 17+** — API in Satellite **`xq-runner-sdk`** (Java); Runner CLI **Java or Kotlin** |
 | Build | **Gradle** + Shadow (or equivalent) for Spec fat JARs |
 | CLI | Thin CLI edge (**Picocli** recommended) → services |
 | Distribution | **JVM app** (`installDist` / `run`) — **not** native binary |
 | JSON / passport | **Jackson** |
-| Plugin model | Shared **`runner-sdk`** + remote Spec fat JARs + **ServiceLoader** + isolated **ClassLoader** |
-| Spec publish | **GitHub Release asset** (fat JAR URL) + **sha256** pin — not Maven/GitHub Packages for v1 |
+| Plugin model | **`xq-runner-sdk`** library + remote Spec fat JARs + **ServiceLoader** + isolated **ClassLoader** |
+| SDK publish | **GitHub Packages** (Maven coords) — normal `implementation` / `compileOnly` |
+| Spec publish | **GitHub Release asset** (fat JAR URL) + **sha256** pin — not Maven for Spec plugins |
 
 **Not used:** Python / uv / Fire / httpimport for the Terminal core; Maven coordinate resolve / GitHub Packages Maven registry as the Spec load path. (`xq-motest` stays Swift.)
 
@@ -66,9 +67,11 @@ Ship **`xq-terminal`** inside **`xq-qe-box`** as a **JVM Runner + controller CLI
 ### Package layout (`cli` / `services` / `models` / `adapters`)
 
 ```
+xq-runner-sdk/                    # separate Satellite — Java API only
+└── com.experiencequality.runner:runner-sdk
+
 xq-qe-box/
-├── packages/runner-sdk/          # shared API (RunnerSpec, SpecContext, SpecResult, …)
-├── cli/xq-terminal/              # Runner CLI + board controller
+├── cli/xq-terminal/              # Runner CLI + board controller (depends on runner-sdk)
 │   └── src/main/java/.../
 │       ├── cli/                  # Picocli commands only
 │       ├── services/             # BoardService, SpecLoadService, …
@@ -144,7 +147,9 @@ Optional Spec Index entry (config or future index file):
 
 `file://` URLs allowed for local/dev; sha256 still required unless a documented test-only escape hatch.
 
-### Shared contract (`runner-sdk`)
+### Shared contract (`xq-runner-sdk`)
+
+Owned by Satellite [`xq-runner-sdk`](xq-runner-sdk.md). Coordinates: `com.experiencequality.runner:runner-sdk`.
 
 ```java
 public interface RunnerSpec {
@@ -293,20 +298,21 @@ No Runner rebuild / no Spec `implementation` in Runner Gradle / no ServiceLoader
 
 ## Acceptance (Spec-level)
 
-- [ ] `runner-sdk` published/consumed; example Spec fat JAR loads via ServiceLoader from Runner
+- [ ] `xq-runner-sdk` published; Terminal + example Spec consume it
 - [ ] `xq-terminal board --gate merge` fixture passport (pass / fail / quarantine / bad accounting)
 - [ ] Accounting enforced
 - [ ] `board --gate release` with stub sandbox + `--spec-url` + `--spec-sha256` returns qualified/not; mismatch fails closed
 - [ ] Specs are **not** Runner `implementation` dependencies
 - [ ] Skill `xq-terminal` installable via `gh skill`
 - [ ] Hub Idea collapsed; linked from `xq-qe-box` Spec
-- [x] Tracer Tickets #17–#22 (JVM stack; Spec pin = Release URL + sha256)
+- [x] Tracer Tickets (JVM stack; Spec pin = Release URL + sha256; SDK = separate Satellite)
 
 ## Tracer-bullet Tickets
 
-1. [#17](https://github.com/ExperienceQuality/xq-hub/issues/17) — `runner-sdk` + passport models + `board --gate merge`
-2. [#18](https://github.com/ExperienceQuality/xq-hub/issues/18) — Skill `xq-terminal` + README
-3. [#19](https://github.com/ExperienceQuality/xq-hub/issues/19) — Stub sandbox + Spec ClassLoader load (`--spec-url` + `--spec-sha256`) + `board --gate release`
-4. [#20](https://github.com/ExperienceQuality/xq-hub/issues/20) — Satellite CI emits `passport.json`
-5. [#21](https://github.com/ExperienceQuality/xq-hub/issues/21) — Real sandbox backend (later)
-6. [#22](https://github.com/ExperienceQuality/xq-hub/issues/22) — Example Spec fat JAR (ServiceLoader + GitHub Release + sha256)
+1. [#23](https://github.com/ExperienceQuality/xq-hub/issues/23) — `xq-runner-sdk` bootstrap (Java API + publish)
+2. [#17](https://github.com/ExperienceQuality/xq-hub/issues/17) — passport models + `board --gate merge` (blocked by #23)
+3. [#18](https://github.com/ExperienceQuality/xq-hub/issues/18) — Skill `xq-terminal` + README
+4. [#19](https://github.com/ExperienceQuality/xq-hub/issues/19) — Stub sandbox + Spec ClassLoader load (`--spec-url` + `--spec-sha256`) + `board --gate release`
+5. [#20](https://github.com/ExperienceQuality/xq-hub/issues/20) — Satellite CI emits `passport.json`
+6. [#21](https://github.com/ExperienceQuality/xq-hub/issues/21) — Real sandbox backend (later)
+7. [#22](https://github.com/ExperienceQuality/xq-hub/issues/22) — Example Spec fat JAR (ServiceLoader + GitHub Release + sha256; `compileOnly` on SDK)
