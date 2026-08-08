@@ -9,3 +9,5 @@ TAP-like **airport Terminal** for ExperienceQuality: an asset checks in with a *
 Not a clone of Google’s internal TAP binary — borrows the **gateway** role. Aligns with Hub [`quality/`](../../quality/README.md).
 
 **Home:** Runner/skills → [`xq-qe-box`](../specs/xq-qe-box.md); API → [`xq-terminal-sdk`](../specs/xq-terminal-sdk.md).
+
+**Alternate (Python) Idea:** Specs as wheels; registry meta-package lists them as `pyproject` deps after YAML sanitize — [`xq-terminal-python-registry`](xq-terminal-python-registry.md).
