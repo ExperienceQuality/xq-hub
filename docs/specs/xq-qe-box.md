@@ -56,7 +56,7 @@ Five skills under `skills/quality-*` enforce Hub [`quality/`](../../quality/READ
 
 ### Terminal (TAP-like boarding)
 
-[`xq-terminal` Spec](xq-terminal.md): **Python** CLI that scans a Satellite CI **passport** for merge boarding, and for release runs Specs via [`xq-terminal-registry`](xq-terminal-registry.md) + stub sandbox. Protocol: [`xq-terminal-sdk`](xq-terminal-sdk.md).
+[`xq-terminal` Spec](xq-terminal.md) (code-level): **Python** CLI; Specs via [`xq-terminal-registry`](xq-terminal-registry.md); protocol [`xq-terminal-sdk`](xq-terminal-sdk.md); authoring [`xq-terminal-spec-wheel`](xq-terminal-spec-wheel.md).
 
 ### Skills (`gh skill` / registry)
 
