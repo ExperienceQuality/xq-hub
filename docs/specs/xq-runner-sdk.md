@@ -72,11 +72,11 @@ xq-runner-sdk/
 
 ## Acceptance
 
-- [ ] Repo `ExperienceQuality/xq-runner-sdk` exists; catalogue + `satellite:xq-runner-sdk` label
-- [ ] Java API matches above; `./gradlew build` green
-- [ ] Documented consume path: Runner `implementation`, Spec `compileOnly`
-- [ ] First version publishable (GitHub Packages or documented `mavenLocal` for bootstrap)
-- [ ] `xq-terminal` Spec points here (not `xq-qe-box/packages/runner-sdk`)
+- [x] Repo `ExperienceQuality/xq-runner-sdk` exists; catalogue + `satellite:xq-runner-sdk` label
+- [x] Java API matches above; `./gradlew build` green
+- [x] Documented consume path: Runner `implementation`, Spec `compileOnly`
+- [x] First version publishable (GitHub Packages or documented `mavenLocal` for bootstrap)
+- [x] `xq-terminal` Spec points here (not `xq-qe-box/packages/runner-sdk`)
 
 ## Tracer-bullet Tickets
 
