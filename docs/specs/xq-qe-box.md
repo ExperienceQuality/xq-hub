@@ -19,7 +19,7 @@ xq-qe-box/
 ├── CONTEXT.md
 ├── README.md
 ├── cli/xq-motest/                   # Swift CLI → DeviceKit (from xq-ios-act)
-├── cli/xq-terminal/                 # JVM Terminal / Spec Runner (see xq-terminal Spec)
+├── cli/xq-terminal/                 # Python Terminal (see xq-terminal Spec)
 ├── packages/sandbox/                # Terminal sandbox provisioner (stub v1)
 ├── skills/
 │   ├── xq-motest/                   # skill for DeviceKit-direct CLI
@@ -35,7 +35,7 @@ xq-qe-box/
 └── packages/                        # reserved
 ```
 
-**`xq-terminal-sdk`** lives in Satellite [`xq-terminal-sdk`](xq-terminal-sdk.md) — not under this monorepo. Terminal depends on it as a normal library; Specs `compileOnly`.
+**`xq-terminal-sdk`** and **`xq-terminal-registry`** are separate Satellites — not under this monorepo. Terminal depends on the **registry** meta-package (not individual Spec wheels).
 
 ### Primary CLI: xq-motest
 
@@ -56,7 +56,7 @@ Five skills under `skills/quality-*` enforce Hub [`quality/`](../../quality/READ
 
 ### Terminal (TAP-like boarding)
 
-[`xq-terminal` Spec](xq-terminal.md): CLI runner/controller that scans a Satellite CI **passport** (small/medium) for merge boarding, and for release boarding runs large tests via an in-box **sandbox** (stub v1) against `ipa`/`apk`/service artifacts. Shared plugin API: [`xq-terminal-sdk`](xq-terminal-sdk.md).
+[`xq-terminal` Spec](xq-terminal.md): **Python** CLI that scans a Satellite CI **passport** for merge boarding, and for release runs Specs via [`xq-terminal-registry`](xq-terminal-registry.md) + stub sandbox. Protocol: [`xq-terminal-sdk`](xq-terminal-sdk.md).
 
 ### Skills (`gh skill` / registry)
 

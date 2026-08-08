@@ -1,84 +1,84 @@
 # Spec: xq-terminal-sdk
 
-**Status:** Active — buildable plan for Satellite `xq-terminal-sdk`.
+**Status:** Active — **Python** protocol package for Terminal Specs.
 
-**Related:** [`docs/specs/xq-terminal.md`](xq-terminal.md) · [`docs/specs/xq-qe-box.md`](xq-qe-box.md)
+**Related:** [`docs/specs/xq-terminal.md`](xq-terminal.md) · [`docs/specs/xq-terminal-registry.md`](xq-terminal-registry.md)
+
+**Pivot:** Java/Gradle API descoped. Satellite `ExperienceQuality/xq-terminal-sdk` is rewritten as a **Python** library (or replaced by a Python package of the same product name).
 
 ## Problem
 
-`xq-terminal` (Runner) and remote Spec fat JARs must share a stable **Java** contract (`RunnerSpec`, context, result) without putting that API inside the QE monorepo or making Specs a Runner build dependency. The contract needs its own publishable artifact and version line.
+Terminal Specs and the registry need a shared **Python** contract (`RunnerSpec`, context, result) without embedding passport/CLI logic in Spec wheels.
 
 ## Solution
 
-Ship Satellite **`xq-terminal-sdk`** (`ExperienceQuality/xq-terminal-sdk`) as a **Java 17+ library** — interfaces and records only (no CLI, no ClassLoader, no passport logic).
+Publish **`xq-terminal-sdk`** as a Python package (uv/`pyproject.toml`):
 
 | Layer | Choice |
 | --- | --- |
-| Language | **Java 17+** (interfaces/records; no Kotlin in the SDK) |
-| Build | **Gradle** (Java library) |
-| Coordinates | `com.experiencequality.terminal:terminal-sdk:<version>` |
-| Publish (v1) | **GitHub Packages** (Maven) — library consumers use normal Gradle deps |
-| Consumers | Runner (`implementation`); Specs (`compileOnly`, exclude from fat JAR) |
-
-**Not this Satellite:** Terminal CLI, sandbox, passport models, Spec plugins, Python/Node loaders.
+| Language | **Python 3.11+** |
+| API | Protocol / dataclasses (or Pydantic models if shared validation helps) |
+| Consumers | Spec wheels (`dependencies`); registry may re-export; Terminal optional |
 
 ### API (v1)
 
-```java
-package com.experiencequality.terminal.sdk;
+```python
+from typing import Protocol
+from dataclasses import dataclass
 
-public interface RunnerSpec {
-    String name();
-    SpecResult run(SpecContext context);
-}
+@dataclass(frozen=True)
+class SpecContext:
+    environment: str
+    run_id: str
+    asset: str
+    sha: str
+    gate: str
+    artifact_ref: str | None
 
-public record SpecContext(
-    String environment,
-    String runId,
-    String asset,
-    String sha,
-    String gate,
-    String artifactRef
-) {}
+@dataclass(frozen=True)
+class SpecResult:
+    success: bool
+    message: str
 
-public record SpecResult(
-    boolean success,
-    String message
-) {}
+class RunnerSpec(Protocol):
+    def name(self) -> str: ...
+    def run(self, context: SpecContext) -> SpecResult: ...
 ```
 
-ServiceLoader registration lives in **Spec** projects (`META-INF/services/...`), not in this SDK.
+Specs expose an entry point factory, e.g.:
 
-### Layout
+```toml
+[project.entry-points."xq_terminal.specs"]
+payment-spec = "payment_spec:load_spec"
+```
+
+## Layout
 
 ```
 xq-terminal-sdk/
 ├── CONTEXT.md
 ├── README.md
-├── settings.gradle.kts
-├── build.gradle.kts
-└── src/main/java/com/experiencequality/terminal/sdk/
-    ├── RunnerSpec.java
-    ├── SpecContext.java
-    └── SpecResult.java
+├── pyproject.toml
+└── src/xq_terminal_sdk/
+    ├── __init__.py
+    ├── context.py
+    └── protocol.py
 ```
 
 ## Out of scope
 
-- Picocli / board CLI
-- URL+sha256 Spec loader
-- Passport JSON schema
-- Example payment Spec (Ticket on `xq-qe-box` / example path)
+- Terminal CLI, registry YAML, sandbox  
+- Java sources (archive/remove on rewrite)  
 
 ## Acceptance
 
-- [x] Repo `ExperienceQuality/xq-terminal-sdk` exists; catalogue + `satellite:xq-terminal-sdk` label
-- [x] Java API matches above; `./gradlew build` green
-- [x] Documented consume path: Runner `implementation`, Spec `compileOnly`
-- [x] First version publishable (GitHub Packages or documented `mavenLocal` for bootstrap)
-- [x] `xq-terminal` Spec points here (not `xq-qe-box/packages/…`)
+- [ ] Python package builds (`uv build` / pip install)  
+- [ ] Specs can depend on it and implement `RunnerSpec`  
+- [ ] Docs: entry-point group `xq_terminal.specs`  
+- [ ] Catalogue purpose line = Python protocol (not Java)  
+- [x] Java bootstrap (#23) recorded as superseded by Python pivot  
 
-## Tracer-bullet Tickets
+## Tracer Tickets
 
-1. [#23](https://github.com/ExperienceQuality/xq-hub/issues/23) — Bootstrap Satellite + Java API + publish (renamed to `xq-terminal-sdk`)
-2. Consumers: Terminal (#17+) and example Spec (#22) depend on published SDK
+1. [#24](https://github.com/ExperienceQuality/xq-hub/issues/24) — Rewrite Satellite to Python protocol  
+2. Example Spec (#22) + registry (#25) consume this package  

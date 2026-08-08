@@ -1,206 +1,117 @@
 # Spec: xq-terminal
 
-**Status:** Active — buildable plan for Satellite `xq-qe-box` (CLI) + `xq-terminal-sdk` (API).
+**Status:** Active — **Python-only** buildable plan.
 
-**Related:** [`docs/ideas/xq-terminal.md`](../ideas/xq-terminal.md) · [`docs/specs/xq-qe-box.md`](xq-qe-box.md) · [`docs/specs/xq-terminal-sdk.md`](xq-terminal-sdk.md) · Hub [`quality/`](../../quality/README.md) · quality skills in `xq-qe-box`
+**Related:** [`docs/ideas/xq-terminal.md`](../ideas/xq-terminal.md) · [`docs/specs/xq-qe-box.md`](xq-qe-box.md) · [`docs/specs/xq-terminal-sdk.md`](xq-terminal-sdk.md) · [`docs/specs/xq-terminal-registry.md`](xq-terminal-registry.md) · Hub [`quality/`](../../quality/README.md)
+
+**Pivot:** JVM / fat JAR / ClassLoader / Release URL+sha256 Spec loading is **descoped**. Product path is Python wheels + registry meta-package.
 
 ## Problem
 
-XQ needs a TAP-like **admission gate**: given a shippable **asset**, decide whether it may **merge** or **release**, based on small/medium evidence and (for release) large tests in a sandbox against the real artifact. Today policy lives in `quality/` and skills, but there is no single **runner/controller** that agents and CI call for a clear qualified / not outcome.
-
-Asset-specific large/release logic must be **addable without rebuilding the Terminal**: Specs are remote runtime plugins, not Runner build dependencies.
+XQ needs a TAP-like **admission gate**: given a shippable **asset**, decide whether it may **merge** or **release**, based on small/medium evidence and (for release) large tests in a sandbox against the real artifact. Asset-specific large/release logic must be addable without rebuilding Terminal or putting Spec dependency trees into the Runner.
 
 ## Solution
 
-Ship **`xq-terminal`** inside **`xq-qe-box`** as a **JVM Runner + controller CLI**. Metaphor: airport Terminal — check-in → validate passport → board merge plane or release plane.
+Ship **`xq-terminal`** (Python CLI) in **`xq-qe-box`**. Metaphor: airport Terminal — passport → board merge or release plane.
 
-**Tech stack (locked):**
+**Tech stack (locked — Python only):**
 
 | Layer | Choice |
 | --- | --- |
-| Language | **JVM 17+** — API in Satellite **`xq-terminal-sdk`** (Java); Runner CLI **Java or Kotlin** |
-| Build | **Gradle** + Shadow (or equivalent) for Spec fat JARs |
-| CLI | Thin CLI edge (**Picocli** recommended) → services |
-| Distribution | **JVM app** (`installDist` / `run`) — **not** native binary |
-| JSON / passport | **Jackson** |
-| Plugin model | **`xq-terminal-sdk`** library + remote Spec fat JARs + **ServiceLoader** + isolated **ClassLoader** |
-| SDK publish | **GitHub Packages** (Maven coords) — normal `implementation` / `compileOnly` |
-| Spec publish | **GitHub Release asset** (fat JAR URL) + **sha256** pin — not Maven for Spec plugins |
+| Language | **Python 3.11+** |
+| Tooling | **uv** + `pyproject.toml` |
+| CLI | Thin edge (**Typer** recommended) → services |
+| Passport models | **Pydantic** |
+| Spec protocol | Satellite **`xq-terminal-sdk`** (Python package) |
+| Spec plugins | Separate **wheels** (`login-spec`, `payment-spec`, …) + entry points |
+| Spec intake | Satellite **`xq-terminal-registry`**: authors register in **YAML** → CI **sanitizes** → generates registry `pyproject.toml` deps → publishes meta-package |
+| Terminal deps | **`xq-terminal-registry`** only (pinned version) for Specs — not individual Spec wheels |
+| Distribution | Installable CLI (`uv tool` / pipx / `pip install`) |
 
-**Not used:** Python / uv / Fire / httpimport for the Terminal core; Maven coordinate resolve / GitHub Packages Maven registry as the Spec load path. (`xq-motest` stays Swift.)
+**Not used:** JVM, Gradle, ClassLoader, ServiceLoader, fat JAR Specs, Maven/`--spec-url`+sha256 Spec load path. (`xq-motest` stays Swift.)
 
 ```
                     passport.json (CI artifact)
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────┐
-│  xq-terminal (JVM Runner)                               │
+│  xq-terminal (Python)                                   │
 │  board --gate merge|release --asset --sha --reports …   │
-│  [release] resolve Spec JAR → ClassLoader → ServiceLoader│
+│  [release] get_spec(id) from xq-terminal-registry       │
 └─────────────┬─────────────────────────────┬─────────────┘
               │                             │
      merge: scan passport            release: passport OK
      failed==0 (quarantine OK)              │
               │                             ▼
               │                    stub sandbox (v1)
-              │                    + load remote Spec fat JAR
-              │                             │
-              │                             ▼
-              │                    RunnerSpec.run(context)
+              │                    + registry.get_spec(…).run(ctx)
               ▼                             ▼
          JSON: qualified | not qualified + reasons
 ```
 
-### Product gates (unchanged)
+### Product gates
 
-| Gate | Name | Requires | Decision |
-| --- | --- | --- | --- |
-| **merge** | Merge plane | Passport for small+medium | `failed == 0` (quarantined allowed) |
-| **release** | Release plane | Passport OK **+** shippable artifact **+** sandbox + Spec run | Passport rule, then Spec/sandbox green |
+| Gate | Requires | Decision |
+| --- | --- | --- |
+| **merge** | Passport (small+medium) | `failed == 0` (quarantined allowed) |
+| **release** | Passport OK **+** artifact **+** sandbox + Spec via registry | Passport rule, then Spec green |
 
-`passRatio` (`passed / dryRunTotal`) is **informational** — not a soft pass for real failures.
+`passRatio` is **informational** only.
 
 ---
 
-## Architecture & design patterns
+## Architecture
 
-### Package layout (`cli` / `services` / `models` / `adapters`)
+### Repos / packages
+
+| Piece | Satellite / home | Role |
+| --- | --- | --- |
+| Protocol | [`xq-terminal-sdk`](xq-terminal-sdk.md) | `RunnerSpec` / `SpecContext` / `SpecResult` |
+| Registry | [`xq-terminal-registry`](xq-terminal-registry.md) | YAML sanitize → generated deps → meta-wheel |
+| Specs | N repos (or packages) | Publish wheels; entry point `xq_terminal.specs` |
+| Runner | `xq-qe-box` / `cli/xq-terminal` | `board` CLI; depends on registry (+ sdk as needed) |
 
 ```
-xq-terminal-sdk/                   # separate Satellite — Java API only
-└── com.experiencequality.terminal:terminal-sdk
+xq-terminal-sdk/                 # Python protocol wheel
+xq-terminal-registry/            # specs.yaml → sanitize → pyproject deps → get_spec()
+login-spec/, payment-spec/, …    # Spec wheels (dependencies of registry)
 
 xq-qe-box/
-├── cli/xq-terminal/              # Runner CLI + board controller (depends on terminal-sdk)
-│   └── src/main/java/.../
-│       ├── cli/                  # Picocli commands only
-│       ├── services/             # BoardService, SpecLoadService, …
-│       ├── models/               # Passport, BoardResult (Jackson)
-│       └── adapters/             # PassportFileAdapter, StubSandbox, Url+Sha256 resolver, ClassLoader
-├── packages/sandbox/             # stub provisioner API (v1); real backends later
+├── cli/xq-terminal/             # Python Terminal (Typer → services)
+├── packages/sandbox/            # stub provisioner (v1)
 ├── skills/xq-terminal/
-├── cli/xq-motest/                # existing Swift
+├── cli/xq-motest/               # Swift (unchanged)
 └── skills/quality-*/
 ```
 
-**Patterns:**
+### Core principle
 
-| Concern | Pattern |
-| --- | --- |
-| CLI | Thin **command** edge → `BoardService` |
-| Passport / board JSON | **Models** validated at boundary (Jackson) |
-| Merge vs release | **Strategy** / gate branch on `BoardService` |
-| Sandbox | **Port + adapter** (`SandboxPort`, `StubSandboxAdapter`) |
-| Asset large tests | **Remote Spec plugin** (not Runner compile dependency) |
-| Isolation | **One ClassLoader per Spec**; parent for `java.*` + `terminal-sdk` API |
-
-### Remote JVM Spec Runner (core principle)
-
-> A **Spec** is a remote runtime plugin artifact, not a Runner build dependency.
-
-Two roles:
-
-| Role | Knows | Does not |
-| --- | --- | --- |
-| **Runner** (`xq-terminal`) | `terminal-sdk`, URL+sha256 fetch/cache, ClassLoader, ServiceLoader, board/passport | Specs as `implementation` deps; Maven registry resolve |
-| **Spec** (e.g. payment-spec) | Implements `RunnerSpec`, owns OkHttp/Jackson/…, builds fat JAR, publishes as **Release asset** | Coupling into Runner `build.gradle` |
-
-```
-Spec project                         Runner project
-------------                         --------------
-terminal-sdk (compileOnly)           terminal-sdk
-okhttp, jackson, …                  plugin loader
-     | build fat JAR                 URL + sha256 resolver
-     v
-payment-spec-all.jar
-     | attach to GitHub Release
-     v
-https://github.com/…/releases/download/v1.2.3/payment-spec-all.jar
-     | GET → sha256 verify → cache
-     v
-Runner → ClassLoader → ServiceLoader → RunnerSpec.run()
-```
-
-**Do not** add Specs to the Runner:
-
-```kotlin
-// WRONG
-implementation("com.myorg.specs:payment-spec:1.4.0")
-```
-
-**Locked Spec pin (v1):** URL + sha256 only. No `--spec` Maven coordinates.
+> Specs are **not** Terminal dependencies. They are **registry** dependencies (after YAML sanitize). Terminal imports the registry only.
 
 ```text
-xq-terminal board … \
-  --spec-url https://github.com/org/repo/releases/download/v1.2.3/payment-spec-all.jar \
-  --spec-sha256 <hex>
+WRONG:  xq-terminal pyproject depends on payment-spec
+RIGHT:  specs.yaml → sanitize → xq-terminal-registry depends on payment-spec==…
+        xq-terminal depends on xq-terminal-registry==…
 ```
 
-Optional Spec Index entry (config or future index file):
+### Release Spec selection
 
-```json
-{
-  "url": "https://github.com/org/repo/releases/download/v1.2.3/payment-spec-all.jar",
-  "sha256": "<hex>"
-}
+```bash
+xq-terminal board \
+  --asset <id> \
+  --gate release \
+  --sha <git-sha> \
+  --reports <passport.json> \
+  --artifact <path-or-ref> \
+  --spec <spec-id>              # e.g. payment-spec
+  # optional: --registry-version pin already in Terminal env/install
 ```
 
-`file://` URLs allowed for local/dev; sha256 still required unless a documented test-only escape hatch.
-
-### Shared contract (`xq-terminal-sdk`)
-
-Owned by Satellite [`xq-terminal-sdk`](xq-terminal-sdk.md). Coordinates: `com.experiencequality.terminal:terminal-sdk`.
-
-```java
-public interface RunnerSpec {
-    String name();
-    SpecResult run(SpecContext context);
-}
-
-public record SpecContext(
-    String environment,
-    String runId,
-    String asset,
-    String sha,
-    String gate,
-    String artifactRef   // optional; set on release
-) {}
-
-public record SpecResult(
-    boolean success,
-    String message
-) {}
-```
-
-Spec registers via ServiceLoader:
-
-```text
-META-INF/services/<RunnerSpec FQCN>
-→ com.example.payment.PaymentSpec
-```
-
-Fat JAR includes Spec + its runtime deps; **exclude** `terminal-sdk` types from the uber JAR (Runner provides them on the parent ClassLoader).
-
-### ClassLoader isolation
-
-```
-Runner ClassLoader
-└── terminal-sdk
-      ├── Spec ClassLoader A (PaymentSpec, Jackson 2, OkHttp 4)
-      └── Spec ClassLoader B (LoginSpec, Jackson 3, OkHttp 5)
-```
-
-Delegate to parent: `java.*`, runner API packages. Prefer **child-first** for plugin classes/deps (custom ClassLoader; default `URLClassLoader` is parent-first and insufficient for conflicting deps).
-
-Production load path: **`--spec-url` + `--spec-sha256`** → download (or cache hit) → **verify SHA-256** (fail closed on mismatch) → `URLClassLoader` from local file → `ServiceLoader.load(RunnerSpec.class, loader)`.
-
-Cache key: sha256 (content-addressed under e.g. `~/.cache/xq-terminal/specs/<sha256>/…`). Never load a JAR whose digest does not match the pin.
+Terminal: `from xq_terminal_registry import get_spec` → `get_spec(spec_id).run(ctx)`.
 
 ### Passport contract
 
-Produced by **Satellite CI** after small/medium (planned inventory = dry-run), published as a **build artifact** (e.g. `dist/quality/passport.json`). Terminal **only scans**; it does not invent the passport.
-
-Minimal schema (v1):
+Unchanged schema vs prior Spec — Satellite CI artifact; Terminal only scans.
 
 ```json
 {
@@ -214,38 +125,14 @@ Minimal schema (v1):
     "failed": 5,
     "quarantined": 5
   },
-  "coverage": {
-    "passRatio": 0.9167
-  },
-  "suites": [
-    {
-      "name": "UnitTests",
-      "size": "small",
-      "dryRunTotal": 80,
-      "passed": 78,
-      "failed": 1,
-      "quarantined": 1,
-      "status": "passed|failed|quarantined",
-      "owner": "optional-if-quarantined",
-      "expiresAt": "optional-iso8601"
-    }
-  ]
+  "coverage": { "passRatio": 0.9167 },
+  "suites": []
 }
 ```
 
-Rules:
-
-- `dryRunTotal` = tests **discovered/planned** before execute.
-- Accounting: `passed + failed + quarantined == dryRunTotal`.
-- `passRatio = passed / dryRunTotal`.
-- Quarantined needs owner + expiry when status is `quarantined`.
-- Any non-quarantined `failed` → **not qualified**.
+Rules: `passed + failed + quarantined == dryRunTotal`; qualify iff `failed == 0`; quarantined needs owner + expiry when used.
 
 ### CLI contract
-
-Distribution: **JVM app** via Gradle Application plugin (`installDist` / `run`) — script launcher `xq-terminal` on PATH after install. Requires a JDK/JRE at runtime.
-
-**Descoped:** native OS binary (GraalVM Native Image, Kotlin/Native, jlink/jpackage as a product requirement). Dynamic Spec `ClassLoader` loading is incompatible with a closed-world native image; do not pursue a single static binary in v1.
 
 Env: `XQ_TERMINAL_*`.
 
@@ -256,17 +143,17 @@ xq-terminal board \
   --sha <git-sha> \
   --reports <dir-or-passport.json> \
   [--artifact <path-or-ref>] \
-  [--spec-url <jar-url> --spec-sha256 <hex>]
+  [--spec <spec-id>]
 ```
 
-- **merge:** passport required; Spec flags unused.
-- **release:** `--artifact` required; `--spec-url` **and** `--spec-sha256` required for Spec load (v1).
+- **merge:** passport only.  
+- **release:** `--artifact` + `--spec` required (v1).  
 
-Stdout: agent-native JSON (`qualified`, `passRatio`, `reasons`, Spec message when run).
+Stdout: agent-native JSON (`qualified`, `passRatio`, `reasons`, Spec message).
 
-### Sandbox platform (v1 stub)
+### Sandbox (v1 stub)
 
-In-box stub provisioner: accept artifact + asset → fake handle/endpoints; then invoke loaded `RunnerSpec`. Real DO/K8s/device-lab backends later behind the same port. DeviceKit install remains infra / `xq-motest` (ADR-0001).
+Stub provisioner in-box; then `get_spec(…).run(ctx)`. Real backends later. DeviceKit / `xq-motest` unchanged (ADR-0001).
 
 ### Skills
 
@@ -274,45 +161,41 @@ In-box stub provisioner: accept artifact + asset → fake handle/endpoints; then
 gh skill install ExperienceQuality/xq-qe-box xq-terminal
 ```
 
-Skill: run `xq-terminal board`, interpret JSON; do not reimplement passport rules in prose.
+### Spec author flow
 
-### Developer experience (Specs)
-
+```text
+implement Spec (sdk protocol) → publish wheel + entry point
+  → PR pin into registry specs.yaml
+  → sanitize CI → registry release
+  → Terminal (already on registry) can --spec <id>
 ```
-implement RunnerSpec → add deps → fat JAR → GitHub Release asset + publish sha256 → pin in CI/index
-```
-
-No Runner rebuild / no Spec `implementation` in Runner Gradle / no ServiceLoader hardcoding of Spec classes / no Maven Packages resolve in the Runner.
 
 ## Out of scope (v1)
 
-- Cloning Google TAP / Forge
-- Python Terminal core
-- Soft-qualify on `passRatio` while `failed > 0`
-- Full multi-tenant sandbox
-- New Satellite solely for Terminal
-- Replacing `xq-motest`
-- In-process loading of Specs without **URL + sha256** pin/cache/verify
-- Maven / GitHub Packages as Spec resolve path (v1)
-- **Native binary** shipping (GraalVM Native Image, Kotlin/Native, or jpackage as a v1 deliverable) — JVM distribution only
+- JVM / Kotlin Terminal or Specs  
+- Per-board `--spec-url` / sha256 ClassLoader path  
+- Soft-qualify on `passRatio` while `failed > 0`  
+- Full multi-tenant sandbox  
+- Replacing `xq-motest`  
+- Authors editing registry `pyproject.toml` by hand  
 
-## Acceptance (Spec-level)
+## Acceptance
 
-- [ ] `xq-terminal-sdk` published; Terminal + example Spec consume it
-- [ ] `xq-terminal board --gate merge` fixture passport (pass / fail / quarantine / bad accounting)
-- [ ] Accounting enforced
-- [ ] `board --gate release` with stub sandbox + `--spec-url` + `--spec-sha256` returns qualified/not; mismatch fails closed
-- [ ] Specs are **not** Runner `implementation` dependencies
-- [ ] Skill `xq-terminal` installable via `gh skill`
-- [ ] Hub Idea collapsed; linked from `xq-qe-box` Spec
-- [x] Tracer Tickets (JVM stack; Spec pin = Release URL + sha256; SDK = separate Satellite)
+- [ ] Python `xq-terminal-sdk` protocol published  
+- [ ] Registry: YAML → sanitize → generated deps → `get_spec`  
+- [ ] `board --gate merge` fixtures (pass / fail / quarantine / bad accounting)  
+- [ ] `board --gate release` with stub sandbox + `--spec` via registry  
+- [ ] Terminal does **not** depend on individual Spec wheels  
+- [ ] Skill installable via `gh skill`  
+- [x] Pivot from JVM documented; Python registry Idea collapsed into Specs  
 
 ## Tracer-bullet Tickets
 
-1. [#23](https://github.com/ExperienceQuality/xq-hub/issues/23) — `xq-terminal-sdk` bootstrap (Java API + publish)
-2. [#17](https://github.com/ExperienceQuality/xq-hub/issues/17) — passport models + `board --gate merge` (blocked by #23)
-3. [#18](https://github.com/ExperienceQuality/xq-hub/issues/18) — Skill `xq-terminal` + README
-4. [#19](https://github.com/ExperienceQuality/xq-hub/issues/19) — Stub sandbox + Spec ClassLoader load (`--spec-url` + `--spec-sha256`) + `board --gate release`
-5. [#20](https://github.com/ExperienceQuality/xq-hub/issues/20) — Satellite CI emits `passport.json`
-6. [#21](https://github.com/ExperienceQuality/xq-hub/issues/21) — Real sandbox backend (later)
-7. [#22](https://github.com/ExperienceQuality/xq-hub/issues/22) — Example Spec fat JAR (ServiceLoader + GitHub Release + sha256; `compileOnly` on SDK)
+1. [#24](https://github.com/ExperienceQuality/xq-hub/issues/24) — Python `xq-terminal-sdk` rewrite (supersedes Java #23)  
+2. [#17](https://github.com/ExperienceQuality/xq-hub/issues/17) — passport + `board --gate merge`  
+3. [#25](https://github.com/ExperienceQuality/xq-hub/issues/25) — Registry YAML sanitize + meta-package  
+4. [#22](https://github.com/ExperienceQuality/xq-hub/issues/22) — example Spec wheel (`login-spec` or `payment-spec`)  
+5. [#19](https://github.com/ExperienceQuality/xq-hub/issues/19) — stub sandbox + release via `get_spec`  
+6. [#18](https://github.com/ExperienceQuality/xq-hub/issues/18) — skill + README  
+7. [#20](https://github.com/ExperienceQuality/xq-hub/issues/20) — CI emits passport  
+8. [#21](https://github.com/ExperienceQuality/xq-hub/issues/21) — real sandbox (later)  
