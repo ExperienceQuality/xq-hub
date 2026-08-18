@@ -16,6 +16,8 @@ is eligible to start only when it is labelled `ready-for-agent` and contains:
 - `Delegated to: xq-<role>`
 - target repository and bounded paths/scope
 - acceptance criteria and dependencies
+- a solution-architect technical-design handoff or an explicit statement that
+  no cross-cutting technical design is required
 - named independent human reviewer
 
 The product owner maintains this parent-issue status block:
@@ -23,8 +25,10 @@ The product owner maintains this parent-issue status block:
 `ready-for-agent` → `in-delivery` → `awaiting-review` → `ready-for-release` →
 `deployed-pending-validation` → `complete`
 
-Use `rollback-pending` or `rolled-back` when applicable. Specialists post their
-final handoff to their assigned hub issue; the product owner reconciles those
+Use `rollback-pending` or `rolled-back` when applicable. A solution architect
+posts a technical-design handoff before cross-cutting implementation when
+system boundaries or contracts remain open. Specialists post their final
+handoff to their assigned hub issue; the product owner reconciles those
 handoffs before advancing the parent state.
 
 ## Integration and release gates
