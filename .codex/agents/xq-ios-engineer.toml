@@ -2,6 +2,7 @@ name = "xq-ios-engineer"
 description = "Use when an XQ-org iOS change needs Swift, SwiftUI, UIKit, mobile-state, or Apple-platform implementation in an assigned repository."
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
+stages = "build"
 sandbox_mode = "workspace-write"
 
 developer_instructions = """

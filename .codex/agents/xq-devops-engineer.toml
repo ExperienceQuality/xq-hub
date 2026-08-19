@@ -2,6 +2,7 @@ name = "xq-devops-engineer"
 description = "Use when an XQ-org repository needs CI/CD, deployment, environment, observability, or operational reliability work in an assigned scope."
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
+stages = "release, cicd, infra"
 sandbox_mode = "workspace-write"
 
 developer_instructions = """
