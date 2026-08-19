@@ -1,67 +1,144 @@
 # XQ Delivery Workflow
 
-## Intake
+The XQ Delivery Hub runs an agentic delivery workflow through GitHub issues.
+Runtime state lives in the issue tracker. Repository docs define the machine.
 
-Keep unclear requests in local `.scratch/intake/` notes; they are ignored by Git
-and must not be created as GitHub issues. Remove an intake note after recording
-its promoted issue number. The product owner creates a GitHub delivery item only
-when it has a target repository, bounded scope, acceptance criteria,
-dependencies, and named review owner.
+## Objects
 
-## Delegation
+### Outcome issue
 
-Each delivery item has child work items for independent write scopes. A work item
-is eligible to start only when it is labelled `ready-for-agent` and contains:
+An outcome issue is the parent `xq-hub` GitHub issue for one approved outcome
+across one or more repositories.
 
-- `Delegated to: xq-<role>`
-- target repository and bounded paths/scope
-- acceptance criteria and dependencies
-- a solution-architect technical-design handoff or an explicit statement that
-  no cross-cutting technical design is required
-- named independent human reviewer
+Created by a human at the idea stage with:
 
-The product owner maintains this parent-issue status block:
+- a one-line title
+- a one-paragraph description of what success looks like
 
-`ready-for-agent` → `in-delivery` → `awaiting-review` → `ready-for-release` →
-`deployed-pending-validation` → `complete`
+The outcome issue carries the overall release identity and audit trail. It does
+not carry stage checklists or detailed execution fields.
 
-Use `rollback-pending` or `rolled-back` when applicable. A solution architect
-posts a technical-design handoff before cross-cutting implementation when
-system boundaries or contracts remain open. Specialists post their final
-handoff to their assigned hub issue; the product owner reconciles those
-handoffs before advancing the parent state.
+### Stage issue
 
-## Integration and release gates
+A stage issue is a child issue of an outcome issue for one stage of the
+workflow:
 
-The product owner may start independent non-overlapping work in parallel. For a
-Java API and iOS client change, prefer a backward-compatible backend release
-before the iOS release. Require test-engineer integration validation once all
-implementation handoffs are ready.
+- `stage:idea`
+- `stage:research`
+- `stage:poc`
+- `stage:design`
+- `stage:build`
+- `stage:test`
+- `stage:release`
 
-`ready-for-release` requires each target repository's required CI checks,
-targeted test evidence, accepted product criteria, and independent human review.
-The parent issue links each item of evidence.
+Every stage issue must contain:
 
-## Release package and deployment
+- `Part of #<outcome-issue-number>`
+- one line of scope for that stage
 
-DevOps commits one immutable release package under `docs/releases/` for every
-release ID. It records rollout and rollback commit-hash collections for all
-application commits/images, database migrations, infrastructure/configuration
-revisions, and deployment artifacts. It excludes secrets.
+Every stage issue must also carry exactly one stage label and one role label:
 
-DevOps captures comparable before/after test results against the declared
-versions. The test engineer owns production smoke-test evidence; DevOps owns
-deployment and observability. A schema-affecting release retains the tested
-Docker compatibility matrix. Application rollback works against the migrated
-database by default; destructive schema rollback needs an explicit approved
-plan.
+- `role:product-owner`
+- `role:solution-architect`
+- `role:java-backend`
+- `role:ios`
+- `role:test`
+- `role:sdet`
+- `role:devops`
 
-Non-production promotion may be automated after gates pass. Production rollout,
-and any rollback after a failure trigger, require an explicit GitHub approval
-comment from the release issue's `Release approver: @<GitHub-user>`. The product
-owner tracks monitoring criteria when defined; until then, a deployed release
-remains `deployed-pending-validation` rather than `complete`.
+The assignee is the claiming agent. Assign the issue before any work begins.
 
-Before closing a delivery item, link the release package, approved asset hashes,
-CI/test evidence, human review, rollout approval, production smoke result, and
-monitoring result.
+### Stage artifact
+
+Closing a stage issue requires a committed stage artifact at:
+
+`docs/stages/<outcome-issue-number>-<stage>.md`
+
+Every stage artifact must contain:
+
+- `## Outputs`
+- `## Evidence`
+- `## Next-stage input`
+
+The release stage artifact adds:
+
+- `## Release package`
+
+The stage artifact is the durable stage record. The release package under
+`docs/releases/<release-id>.md` remains the immutable deployment manifest.
+
+## Stage sequence
+
+The workflow stages are:
+
+`idea → research → poc? → design → build + test → release`
+
+Gate rules:
+
+- `idea` closes before `research` starts
+- `research` closes before `design` starts unless a `poc` issue is opened
+- `poc` is optional and human-triggered
+- `design` closes before `build` starts
+- `build` issues may run in parallel by independent repository scope
+- `test` starts after build handoffs are ready and may overlap final build
+  reconciliation when the test scope is already fixed
+- `release` requires explicit human approval before it closes
+
+## Stage ownership
+
+| Delivery role | Agent file | Stages | Notes |
+| --- | --- | --- | --- |
+| product-owner | `.codex/agents/xq-product-owner.toml` | `idea`, `release` | Coordinates the outcome and records approvals |
+| solution-architect | `.codex/agents/xq-solution-architect.toml` | `research`, `design` | Owns discovery and design decisions |
+| java-backend | `.codex/agents/xq-java-backend-engineer.toml` | `build` | Java and JVM delivery scopes |
+| ios | `.codex/agents/xq-ios-engineer.toml` | `build` | iOS and Swift delivery scopes |
+| sdet | `.codex/agents/xq-sdet.toml` | `build` | Shared test-platform and reliability build scopes |
+| test-engineer | `.codex/agents/xq-test-engineer.toml` | `test` | Targeted regression and smoke evidence |
+| devops | `.codex/agents/xq-devops-engineer.toml` | `release` | Executes release, writes release package, owns deployment evidence |
+
+DevOps may also be assigned earlier stage issues when CI/CD pipeline work or
+infrastructure setup is part of the delivery. That assignment supplements the
+primary stage owner rather than replacing it.
+
+Stage eligibility must stay aligned in two places:
+
+- the `stages` field in each `.codex/agents/*.toml`
+- the role table in this document
+
+## Human approvals
+
+Human approval is required at two gates:
+
+- `idea`: a human creates the outcome issue and approves the idea stage before
+  research starts
+- `release`: a named human approver must approve rollout before the release
+  stage closes
+
+Subagents may collaborate for discovery, but only an open stage issue
+authorizes writes and stage artifacts.
+
+## poc
+
+`poc` is optional. When research cannot settle a design question on paper, the
+research agent flags the need in the research stage issue. A human then creates
+the `stage:poc` issue and blocks design on it.
+
+Any delivery role may own the `poc` issue when explicitly assigned by a human.
+
+## Build, test, and release evidence
+
+Build and test work must still route through registered `delivery-ready`
+repositories in `repository-context.yaml`.
+
+The test engineer owns targeted regression and production smoke evidence. DevOps
+owns the release package, deployment evidence, rollback readiness, and
+observability.
+
+For a schema-affecting release, keep the tested Docker compatibility matrix.
+Application rollback works against the migrated database by default; destructive
+schema rollback requires an explicit approved plan.
+
+Production rollout, and any rollback after a failure trigger, require an
+explicit GitHub approval comment from the named release approver. An outcome
+reaches `complete` only after production smoke tests and the defined monitoring
+result both pass.
