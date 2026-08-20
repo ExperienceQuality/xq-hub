@@ -1,0 +1,22 @@
+plugins {
+    id 'java'
+}
+
+allprojects {
+    group = 'com.xq.poc'
+    version = '0.0.0-SNAPSHOT'
+}
+
+subprojects {
+    apply plugin: 'java'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
+
+    repositories {
+        mavenCentral()
+    }
+}

@@ -1,0 +1,3 @@
+rootProject.name = 'karate-xq-wrapper'
+include 'xq-karate-support'
+include 'consumer-demo'

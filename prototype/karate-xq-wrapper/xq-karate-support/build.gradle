@@ -1,0 +1,3 @@
+dependencies {
+    // Support jar is intentionally free of Karate so consumers own the Karate dependency.
+}
