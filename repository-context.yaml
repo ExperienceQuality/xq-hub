@@ -1,0 +1,48 @@
+# Machine-readable repository context for XQ Hub delivery coordination.
+#
+# This registry is the canonical GitHub reference for repositories known to the
+# hub.  A `reference-only` record may be used for discovery, but it is not
+# sufficient to route a delivery item; promote it to `delivery-ready` only after
+# the required delivery fields have been verified with the repository owner.
+schema_version: 1
+organization: ExperienceQuality
+
+repositories:
+  - id: xq-hub
+    canonical_name: ExperienceQuality/xq-hub
+    role: delivery-hub
+    github:
+      web_url: https://github.com/ExperienceQuality/xq-hub
+      clone_url: git@github.com:ExperienceQuality/xq-hub.git
+      default_branch: main
+    context_status: delivery-ready
+    delivery:
+      purpose: Cross-repository delivery coordination
+      maintainer: XQ delivery lead
+      validation_command: Markdown/link validation
+      deployment_environment: None
+      material_dependencies:
+        - Target XQ repositories
+
+  - id: jvm-test-kit
+    canonical_name: ExperienceQuality/jvm-test-kit
+    role: target-repository
+    github:
+      web_url: https://github.com/ExperienceQuality/jvm-test-kit
+      clone_url: git@github.com:ExperienceQuality/jvm-test-kit.git
+      default_branch: main
+      visibility: public
+    context_status: delivery-ready
+    delivery:
+      purpose: Single-package JVM service-test kit with JUnit Jupiter support and GitHub Packages publication
+      maintainer: '@chauhaidang'
+      validation_command: ./gradlew clean check
+      deployment_environment: GitHub Actions release workflow to GitHub Packages Maven registry
+      material_dependencies:
+        - JDK 21
+        - Gradle Wrapper 9.6
+        - JUnit Jupiter
+        - GitHub Actions
+        - GitHub Packages Maven registry
+        - Docker-compatible runner and approved PostgreSQL image for the PostgreSQL fixture
+        - io.swagger.parser.v3:swagger-parser (OpenAPI 3.0 document loading; exact 2.1.x pin at implement time)
