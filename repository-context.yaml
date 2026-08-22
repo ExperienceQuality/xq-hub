@@ -46,3 +46,50 @@ repositories:
         - GitHub Packages Maven registry
         - Docker-compatible runner and approved PostgreSQL image for the PostgreSQL fixture
         - io.swagger.parser.v3:swagger-parser (OpenAPI 3.0 document loading; exact 2.1.x pin at implement time)
+
+  - id: xq-financial-app
+    canonical_name: ExperienceQuality/xq-financial-app
+    role: target-repository
+    github:
+      web_url: https://github.com/ExperienceQuality/xq-financial-app
+      clone_url: git@github.com:ExperienceQuality/xq-financial-app.git
+      default_branch: main
+      visibility: public
+    context_status: delivery-ready
+    delivery:
+      purpose: Native SwiftUI portfolio application for iPhone and iPad
+      maintainer: '@chauhaidang'
+      validation_command: xcodebuild -project ios-xq-finance-app.xcodeproj -scheme ios-xq-finance-app -destination 'platform=iOS Simulator,name=iPhone 16' test && ./scripts/run-ui-tests.sh
+      deployment_environment: Local Xcode 16+ build and iOS Simulator UI tests; optional Apple Development-signed physical-device scripts
+      material_dependencies:
+        - Xcode 16+
+        - iOS 17+ SDK and simulator
+        - SwiftUI
+        - XCTest and XCUITest
+        - Bash test and device scripts
+        - Apple Development signing for optional physical-device validation
+
+  - id: xq-fitness-app
+    canonical_name: ExperienceQuality/xq-fitness-app
+    role: target-repository
+    github:
+      web_url: https://github.com/ExperienceQuality/xq-fitness-app
+      clone_url: git@github.com:ExperienceQuality/xq-fitness-app.git
+      default_branch: main
+      visibility: public
+    context_status: delivery-ready
+    delivery:
+      purpose: Native offline SwiftUI application for routines, exercises, and progress snapshots
+      maintainer: '@chauhaidang'
+      validation_command: xcodebuild -project ios-xq-fitness-app.xcodeproj -scheme ios-xq-fitness-app -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build && swift test --package-path FitnessCore && ./scripts/run-ui-tests.sh
+      deployment_environment: Local Xcode 16+ build and iOS Simulator UI tests; optional Apple Development-signed physical-device scripts
+      material_dependencies:
+        - Xcode 16+
+        - Swift 5.10+
+        - iOS 17+ SDK and simulator
+        - SwiftUI
+        - Swift Package Manager for FitnessCore
+        - XCTest and XCUITest
+        - XcodeGen for optional project regeneration
+        - Bash test and device scripts
+        - Apple Development signing for optional physical-device validation
