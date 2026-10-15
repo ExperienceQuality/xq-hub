@@ -1,0 +1,6 @@
+interface:
+  display_name: "Software Squad"
+  short_description: "Coordinate parallel software delivery across GitHub repos"
+  default_prompt: "Use $software-squad to register a GitHub repository, run radar, or coordinate an approved work item."
+policy:
+  allow_implicit_invocation: false
