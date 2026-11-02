@@ -24,7 +24,7 @@ Hub v2 is a repository-scoped Codex control plane for coordinating work in regis
 - Run `git diff --check` when this workspace becomes a Git repository.
 - Forward-test risky orchestration behavior in temporary repositories. Do not mutate live GitHub repositories for tests.
 
-<!-- XQ_SQUAD_MANAGED_START version:v1.4.0 -->
+<!-- XQ_SQUAD_MANAGED_START version:v2.0.0 -->
 *Managed by `ExperienceQuality/xq-squad`. Updates modify only this section.*
 
 # XQ Squad
